@@ -93,6 +93,7 @@ body.dmx .mon{display:block}
 .status-line{min-height:1.4em;margin:0;color:var(--acc)}
 .conn{margin-top:2px;min-height:32px;font-size:13px}
 .conn.ok{color:var(--ok);border-color:var(--ok)}
+[hidden]{display:none!important}
 </style>
 <title>Lumi</title>
 </head>
@@ -171,29 +172,29 @@ body.dmx .mon{display:block}
     <h3 id="dfTitle">Nouveau projecteur</h3>
     <label>Nom <input id="fName" required placeholder="ex. Contre jardin"></label>
     <div id="fNewOnly">
-      <label>Connexion
+      <label id="fBrandWrap">Marque
+        <select id="fBrand"></select></label>
+      <label>Modèle
+        <select id="fModel"></select></label>
+      <p id="fBleHint" class="hint"></p>
+    </div>
+    <label>Groupe <input id="fGroup" placeholder="ex. Contres, Fond…"></label>
+    <details id="fDmxAdv">
+      <summary>Avancé (connexion, DMX…)</summary>
+      <label id="fConnWrap">Connexion
         <select id="fConn">
           <option value="ble">Bluetooth (direct, sans boîtier)</option>
           <option value="dmx">DMX / Art-Net (via la passerelle)</option>
         </select></label>
-      <label id="fBrandWrap">Marque
-        <select id="fBrand">
-          <option value="nanlite">Nanlite / Nanlux</option>
-          <option value="godox">Godox</option>
-          <option value="amaran">Aputure / Amaran</option>
-        </select></label>
-      <p id="fBleHint" class="hint"></p>
-      <label id="fProfileWrap">Type de projecteur <select id="fProfile"></select></label>
-    </div>
-    <label>Groupe <input id="fGroup" placeholder="ex. Contres, Fond…"></label>
-    <details id="fDmxAdv">
-      <summary>Avancé (adresse DMX…)</summary>
+      <label id="fProfileWrap">Mode DMX <select id="fProfile"></select></label>
+      <div id="fAddrBox">
       <div class="row">
         <label class="grow">Univers Art-Net <input id="fUni" type="number" min="0" max="32767" value="0"></label>
         <label class="grow">Adresse DMX <input id="fAddr" type="number" min="1" max="512" value="1"></label>
       </div>
       <label id="fCountWrap">Nombre de projecteurs identiques (adresses à la suite) <input id="fCount" type="number" min="1" max="64" value="1"></label>
       <button type="button" id="dfProfiles" class="btn ghost small">Modifier les types de projecteurs…</button>
+      </div>
     </details>
     <div class="row">
       <button type="button" id="dfDelete" class="btn danger" hidden>Supprimer</button>
@@ -250,6 +251,87 @@ body.dmx .mon{display:block}
   <div class="row"><div class="spacer"></div><button id="sClose" class="btn">Fermer</button></div>
 </dialog>
 
+<script>'use strict';
+/* Catalogue des projecteurs par marque.
+   t : 'day' (lumière du jour fixe), 'tung' (tungstène fixe), 'bi' (bicolore), 'rgb' (couleur + blanc réglable), 'dim' (gradateur simple)
+   k : plage de température de couleur [min, max] en Kelvin (une seule valeur = fixe)
+   p : profil DMX imposé (sinon déduit du type)
+   Plages issues de la mémoire des fiches constructeur : si un modèle est faux, choisis « Autre … » de la marque. */
+(function (root) {
+  const D = k => ({ t: 'day', k: [k, k] });
+  const B = (a, b) => ({ t: 'bi', k: [a, b] });
+  const C = (a, b) => ({ t: 'rgb', k: [a, b] });
+  const m = (n, o) => ({ n, ...o });
+
+  const CATALOG = [
+    { id: 'amaran', label: 'Aputure / Amaran', ble: true, models: [
+      m('amaran 60d', D(5600)), m('amaran 60x', B(2700, 6500)), m('amaran 60x S', B(2700, 6500)),
+      m('amaran 100d', D(5600)), m('amaran 100x', B(2700, 6500)), m('amaran 100x S', B(2700, 6500)),
+      m('amaran 200d', D(5600)), m('amaran 200x', B(2700, 6500)), m('amaran 200x S', B(2700, 6500)),
+      m('amaran 300x', B(2700, 6500)), m('amaran 400x', B(2700, 6500)),
+      m('amaran 150c', C(2500, 7500)), m('amaran 300c', C(2500, 7500)),
+      m('amaran Tube T2c / T4c', C(2500, 7500)), m('amaran F22c', C(2500, 7500)),
+      m('Aputure LS 600d Pro', D(5600)), m('Aputure LS 600x Pro', B(2700, 6500)), m('Aputure LS 1200d Pro', D(5600)),
+      m('Aputure Nova P300c', C(2500, 7500)), m('Aputure Infinibar PB12', C(2000, 10000)), m('Aputure MC', C(2000, 10000)),
+      m('Autre Amaran / Aputure — lumière du jour', D(5600)),
+      m('Autre Amaran / Aputure — bicolore', B(2700, 6500)),
+      m('Autre Amaran / Aputure — couleur (RVB)', C(2500, 7500)),
+    ] },
+    { id: 'godox', label: 'Godox', ble: true, models: [
+      m('SL60W', D(5600)), m('SL60IIBi', B(2800, 6500)), m('SL100Bi', B(2800, 6500)),
+      m('SL150II', D(5600)), m('SL150IIBi', B(2800, 6500)), m('SL200II', D(5600)), m('SL200IIBi', B(2800, 6500)),
+      m('SL300II', D(5600)), m('SL300IIBi', B(2800, 6500)),
+      m('UL150', D(5600)), m('UL150Bi', B(2800, 6500)),
+      m('VL150', D(5600)), m('VL200', D(5600)), m('VL300', D(5600)),
+      m('ML30', D(5600)), m('ML30Bi', B(2800, 6500)), m('ML60', D(5600)), m('ML60Bi', B(2800, 6500)),
+      m('KNOWLED M200Bi', B(2800, 6500)), m('KNOWLED M600Bi', B(2800, 6500)), m('KNOWLED MG1200Bi', B(2800, 6500)),
+      m('M1 (RVB)', C(2500, 8500)), m('LC500R / LC500R mini (RVB)', C(2500, 8500)), m('SZ150R (RVB)', C(2500, 8500)),
+      m('TL30 / TL60 / TL120 (tube RVB)', C(2700, 6500)),
+      m('Autre Godox — lumière du jour', D(5600)),
+      m('Autre Godox — bicolore', B(2800, 6500)),
+      m('Autre Godox — couleur (RVB)', C(2500, 8500)),
+    ] },
+    { id: 'nanlite', label: 'Nanlite / Nanlux', ble: true, models: [
+      m('Forza 60', D(5600)), m('Forza 60B', B(2700, 6500)),
+      m('Forza 150', D(5600)), m('Forza 150B', B(2700, 6500)),
+      m('Forza 300 / 300 II', D(5600)), m('Forza 300B', B(2700, 6500)),
+      m('Forza 500', D(5600)), m('Forza 500B', B(2700, 6500)),
+      m('Forza 720', D(5600)), m('Forza 720B', B(2700, 6500)),
+      m('FS-150 / FS-200 / FS-300', D(5600)), m('FS-150B / FS-200B / FS-300B', B(2700, 6500)),
+      m('PavoTube II 6C / 15C / 30C', C(2700, 7500)),
+      m('Pavo Slim 60C / 120C', C(2700, 7500)),
+      m('Autre Nanlite — lumière du jour', D(5600)),
+      m('Autre Nanlite — bicolore', B(2700, 6500)),
+      m('Autre Nanlite — couleur (RVB)', C(2700, 7500)),
+    ] },
+    { id: 'astera', label: 'Astera', ble: false, models: [
+      m('Titan Tube', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
+      m('Helios Tube', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
+      m('Hyperion Tube', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
+      m('AX1 PixelBrick', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
+      m('AX3 LightDrop', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
+      m('AX5 TriplePar', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
+      m('AX10 SpotMax', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
+    ] },
+    { id: 'dmx', label: 'Autre marque (DMX)', ble: false, models: [
+      m('Gradateur simple (1 canal)', { t: 'dim', p: 'dimmer-1' }),
+      m('Lumière du jour + gradateur (1 canal)', { ...D(5600), p: 'dimmer-1' }),
+      m('Bicolore — dim + CCT (2 canaux)', { ...B(2700, 6500), p: 'bicolor-dimcct' }),
+      m('Bicolore — chaud + froid (2 canaux)', { ...B(2700, 6500), p: 'bicolor-warmcool' }),
+      m('RVB (3 canaux)', { ...C(2000, 10000), p: 'rgb-3' }),
+      m('Dim + RVB (4 canaux)', { ...C(2000, 10000), p: 'dim-rgb-4' }),
+      m('RVBW (4 canaux)', { ...C(2000, 10000), p: 'rgbw-4' }),
+      m('RVB + chaud + froid (5 canaux)', { ...C(2000, 10000), p: 'rgbww-5' }),
+    ] },
+  ];
+
+  /** Profil DMX par défaut selon le type de projecteur. */
+  const DMX_BY_TYPE = { day: 'dimmer-1', tung: 'dimmer-1', dim: 'dimmer-1', bi: 'bicolor-dimcct', rgb: 'rgbww-5' };
+
+  const api = { CATALOG, DMX_BY_TYPE };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Catalog = api;
+})(typeof self !== 'undefined' ? self : globalThis);
+</script>
 <script>'use strict';
 /* Cryptographie Bluetooth Mesh en JS pur (AES-128, CMAC, CCM, dérivations k1-k4, s1).
    Pas de dépendance : WebCrypto n'offre ni AES-ECB, ni CMAC, ni CCM.
@@ -410,8 +492,8 @@ body.dmx .mon{display:block}
   const api = { aesBlock, cmac, ccmEncrypt, s1, k1, k2, k3, k4, obfuscate, randomBytes, p256Keypair, ecdh, concat, ascii, hex, unhex, be };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MeshCrypto = api;
 })(typeof self !== 'undefined' ? self : globalThis);
-
-'use strict';
+</script>
+<script>'use strict';
 /* Bluetooth Mesh : paquets réseau/transport, enrôlement PB-GATT, configuration, trames Godox & Amaran.
    Portage de godox_mesh_bt (binary-person/ha-godox-mesh) et amaran-BLE-control (clwill), vérifié par tests croisés. */
 (function (root) {
@@ -587,8 +669,8 @@ body.dmx .mon{display:block}
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Mesh = api;
 })(typeof self !== 'undefined' ? self : globalThis);
-
-'use strict';
+</script>
+<script>'use strict';
 /* Pilotes Bluetooth (Web Bluetooth) : Nanlite (GATT), Godox et Amaran (Mesh via proxy GATT).
    Les trames sont calculées dans mesh.js (testé) ; ici : connexion, file d'envoi, enrôlement guidé. */
 (function (root) {
@@ -811,8 +893,8 @@ body.dmx .mon{display:block}
   const api = { nanlite, NanliteLink, MeshLink, hasBle, nlFrame };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Drivers = api;
 })(typeof self !== 'undefined' ? self : globalThis);
-
-'use strict';
+</script>
+<script>'use strict';
 /* Lumi — contrôle de projecteurs LED multi-marques (DMX / Art-Net via passerelle) */
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -900,8 +982,8 @@ function renderFixture(f, t) {
   const dim = clamp(s.dim / 100) * fxMult(f, t);
   const hasDim = ch.some(c => c.t === 'dim');
   const hasWhite = ch.some(c => ['warm', 'cool', 'w', 'cct'].includes(c.t));
-  const lo = p.cctMin || 2700, hi = p.cctMax || 6500;
-  const tt = clamp((s.cct - lo) / (hi - lo));
+  const lo = f.model?.k?.[0] ?? (p.cctMin || 2700), hi = f.model?.k?.[1] ?? (p.cctMax || 6500);
+  const tt = hi > lo ? clamp((s.cct - lo) / (hi - lo)) : 0;
   const cctMode = s.mode === 'cct';
   // Couleur d'émission RGB
   let col;
@@ -996,7 +1078,7 @@ function renderFixtures() {
     return `<div class="card" data-id="${f.id}">
       <input type="checkbox" class="chk" aria-label="Sélectionner">
       <div class="meta"><b><span class="sw"></span>${esc(f.name)}</b>
-        <small>${f.group ? esc(f.group) : '&nbsp;'}</small><small class="adv">${f.link ? 'Bluetooth · ' + esc(BRAND_LABEL[f.link.brand] || '') + (f.link.addr ? ' #' + f.link.addr : '') : esc(p ? p.label : 'Type manquant') + ' · U' + f.universe + ' @' + String(f.address).padStart(3, '0')}</small>
+        <small>${f.group ? esc(f.group) + (f.model ? ' · ' + esc(f.model.n) : '') : f.model ? esc(f.model.n) : '&nbsp;'}</small><small class="adv">${f.model ? esc(f.model.n) + ' · ' : ''}${f.link ? 'Bluetooth' + (f.link.addr ? ' #' + f.link.addr : '') : (f.model ? '' : esc(p ? p.label : 'Type manquant') + ' · ') + 'U' + f.universe + ' @' + String(f.address).padStart(3, '0')}</small>
         ${f.link ? '<button class="btn ghost small conn">🔵 Connecter</button>' : ''}</div>
       <button class="btn ghost small edit" aria-label="Modifier">✏️</button>
       <div class="line"><input type="range" class="cdim" min="0" max="100" step="0.5" aria-label="Intensité"><span class="pct"></span></div>
@@ -1084,10 +1166,34 @@ function syncPanel() {
   document.querySelectorAll('#swatches .sw-btn').forEach(b => b.classList.toggle('on', isSwatch(s, SWATCHES[+b.dataset.i])));
   document.querySelectorAll('#fxBtns button').forEach(b => b.classList.toggle('on', b.dataset.fx === s.fx));
   $('#spdRow').hidden = s.fx === 'none';
+  // Ne montrer que ce que les projecteurs sélectionnés savent faire
+  const cs = list.map(caps);
+  const anyRgb = cs.some(c => c.rgb), anyTune = cs.some(c => c.tune);
+  const lo = Math.min(...cs.map(c => c.lo)), hi = Math.max(...cs.map(c => c.hi));
+  document.querySelectorAll('#swatches .sw-btn').forEach(b => {
+    const w = SWATCHES[+b.dataset.i];
+    b.hidden = w.s.mode === 'hsi' ? !anyRgb : (!anyTune || w.s.cct < lo - 50 || w.s.cct > hi + 50);
+  });
+  P.cct.min = lo; P.cct.max = hi;
+  P.cct.closest('label').hidden = !anyTune;
+  P.hue.closest('label').hidden = !anyRgb; P.sat.closest('label').hidden = !anyRgb;
 }
 
+/* Ce que sait faire un projecteur (selon son modèle ; sans modèle : tout). */
+function caps(f) {
+  const m = f.model;
+  if (!m) return { tune: true, rgb: true, lo: 1700, hi: 10000 };
+  const [lo, hi] = m.k || [2700, 6500];
+  return { tune: hi > lo, rgb: m.t === 'rgb', lo, hi };
+}
 function apply(patch) {
-  for (const f of selected()) { Object.assign(f.state, patch); f.anim = null; }
+  for (const f of selected()) {
+    const c = caps(f), p = { ...patch };
+    if (p.mode === 'hsi' && !c.rgb) continue;             // pas de couleur sur ce projecteur
+    if ('cct' in p) p.cct = clamp(p.cct, c.lo, c.hi);     // reste dans la plage du modèle
+    if (!c.tune && c.hi === c.lo) { p.cct = c.lo; if (p.mode === 'cct') p.mode = 'cct'; }
+    Object.assign(f.state, p); f.anim = null;
+  }
   save(); syncUI();
 }
 P.dim.oninput = () => apply({ dim: +P.dim.value });
@@ -1181,24 +1287,42 @@ const BLE_HINTS = {
   godox: "Mets le projecteur en mode appairage (bouton Bluetooth maintenu jusqu'au clignotement). Il rejoint un réseau géré par cette app et ne sera plus visible dans l'app Godox tant que tu ne le réinitialises pas.",
   amaran: "Remets le projecteur à zéro (mode appairage). Il rejoint un réseau géré par cette app. Fonction expérimentale : sinon, utilise « J'ai déjà un réseau » avec les clés de ton réseau existant.",
 };
+const CAT = Catalog.CATALOG, brandOf = id => CAT.find(b => b.id === id);
 function fillProfiles() {
-  $('#fProfile').innerHTML = Object.entries(db.profiles).map(([k, p]) => `<option value="${esc(k)}">${esc(p.label || k)}</option>`).join('');
+  $('#fProfile').innerHTML = '<option value="">Automatique</option>' + Object.entries(db.profiles).map(([k, p]) => `<option value="${esc(k)}">${esc(p.label || k)}</option>`).join('');
 }
-function syncDialog() {
+function fillModels() {
+  const b = brandOf($('#fBrand').value);
+  $('#fModel').innerHTML = b.models.map((m, i) => `<option value="${i}">${esc(m.n)}</option>`).join('');
+}
+const curModel = () => brandOf($('#fBrand').value).models[+$('#fModel').value] || null;
+function syncDialog(ev) {
+  const b = brandOf($('#fBrand').value);
+  if (ev && ev.target && ev.target.id === 'fBrand') fillModels();
+  const canBle = b.ble && Drivers.hasBle();
+  if (ev && ev.target && ev.target.id === 'fBrand') $('#fConn').value = canBle ? 'ble' : 'dmx';
+  if (!b.ble) $('#fConn').value = 'dmx';
   const ble = $('#fConn').value === 'ble';
   $('#fNewOnly').hidden = !!editing;
-  $('#fBrandWrap').hidden = !ble; $('#fBleHint').hidden = !ble; $('#fProfileWrap').hidden = ble;
-  $('#fBleHint').textContent = BLE_HINTS[$('#fBrand').value];
-  $('#fDmxAdv').hidden = editing ? isBle(editing) : ble;
+  $('#fConnWrap').hidden = !!editing || !b.ble;
+  $('#fProfileWrap').hidden = !!editing || ble;
+  $('#fBleHint').textContent = ble ? BLE_HINTS[b.id]
+    : b.id === 'astera' ? "Astera : pas de Bluetooth public, pilotage en DMX via la passerelle. Vérifie le mode DMX du projecteur dans « Avancé »."
+    : b.ble ? 'Mode DMX : branche la passerelle (voir Réglages).' : 'Pilotage en DMX via la passerelle (voir Réglages).';
+  $('#fDmxAdv').hidden = editing ? isBle(editing) : false;
+  $('#fAddrBox').hidden = ble && !editing;
 }
 $('#fConn').onchange = $('#fBrand').onchange = syncDialog;
 function openFixture(f) {
   editing = f || null;
   fillProfiles();
+  $('#fBrand').innerHTML = CAT.map(b => `<option value="${b.id}">${esc(b.label)}</option>`).join('');
+  $('#fBrand').value = 'nanlite';
+  fillModels();
   $('#dfTitle').textContent = f ? 'Modifier le projecteur' : 'Nouveau projecteur';
   $('#fName').value = f ? f.name : '';
   $('#fConn').value = Drivers.hasBle() ? 'ble' : 'dmx';
-  $('#fProfile').value = Object.keys(db.profiles)[0];
+  $('#fProfile').value = '';
   const last = [...db.fixtures].reverse().find(x => !isBle(x));
   $('#fUni').value = f ? f.universe : last ? last.universe : 0;
   $('#fAddr').value = f ? f.address : last ? nextAddr(last) : 1;
@@ -1229,20 +1353,25 @@ $('#fFixture').onsubmit = e => {
     if (!isBle(editing)) Object.assign(editing, { universe: clamp(+$('#fUni').value || 0, 0, 32767), address: clamp(+$('#fAddr').value || 1, 1, 512) });
     dF.close(); save(); return renderFixtures();
   }
+  const b = brandOf($('#fBrand').value), mdl = curModel();
+  const model = mdl ? { n: mdl.n, t: mdl.t, k: mdl.k } : null;
   if ($('#fConn').value === 'dmx') {
-    const profile = $('#fProfile').value, universe = clamp(+$('#fUni').value || 0, 0, 32767), address = clamp(+$('#fAddr').value || 1, 1, 512);
+    const profile = $('#fProfile').value || mdl?.p || Catalog.DMX_BY_TYPE[mdl?.t] || 'dimmer-1';
+    const universe = clamp(+$('#fUni').value || 0, 0, 32767), address = clamp(+$('#fAddr').value || 1, 1, 512);
     const n = clamp(+$('#fCount').value || 1, 1, 64), step = db.profiles[profile].channels.length;
     for (let i = 0; i < n; i++) {
-      db.fixtures.push({ id: uid(), name: n > 1 ? `${name} ${i + 1}` : name, profile, universe, address: Math.min(512, address + i * step), group, state: newState() });
+      const st = newState(); if (model && model.k) st.cct = clamp(5600, model.k[0], model.k[1]);
+      db.fixtures.push({ id: uid(), name: n > 1 ? `${name} ${i + 1}` : name, profile, model, universe, address: Math.min(512, address + i * step), group, state: st });
     }
     dF.close(); save(); return renderFixtures();
   }
-  const brand = $('#fBrand').value;
+  const brand = b.id, st = newState();
+  if (model && model.k) st.cct = clamp(5600, model.k[0], model.k[1]);
   if (brand === 'nanlite') {
-    const f = { id: uid(), name, group, profile: '', universe: 0, address: 1, link: { kind: 'nanlite', brand }, state: newState() };
+    const f = { id: uid(), name, group, profile: '', model, universe: 0, address: 1, link: { kind: 'nanlite', brand }, state: st };
     db.fixtures.push(f); dF.close(); save(); renderFixtures();
     connectFixture(f); // appelé dans le geste de l'utilisateur : le sélecteur Bluetooth peut s'ouvrir
-  } else { dF.close(); openMesh({ name, group, brand }); }
+  } else { dF.close(); openMesh({ name, group, brand, model }); }
 };
 
 /* ---------- Appairage Mesh (Godox / Amaran) en 2 étapes ---------- */
@@ -1288,7 +1417,7 @@ $('#dmGo').onclick = async () => {
       await link.configureNode(mesh.addr, mesh.devKey, say);
       mesh.net.nodes.push({ addr: mesh.addr, deviceKey: MeshCrypto.hex(mesh.devKey) });
       mesh.net.nextAddr = mesh.addr + (mesh.num || 1);
-      const f = { id: uid(), name: mesh.name, group: mesh.group, profile: '', universe: 0, address: 1, link: { kind: 'mesh', net: mesh.net.id, addr: mesh.addr, brand: mesh.brand }, state: newState() };
+      const f = { id: uid(), name: mesh.name, group: mesh.group, profile: '', model: mesh.model, universe: 0, address: 1, link: { kind: 'mesh', net: mesh.net.id, addr: mesh.addr, brand: mesh.brand }, state: Object.assign(newState(), mesh.model && mesh.model.k ? { cct: clamp(5600, mesh.model.k[0], mesh.model.k[1]) } : {}) };
       db.fixtures.push(f); save(); renderFixtures(); dM.close();
       toast('Projecteur ajouté ✓ Monte l\'intensité pour le tester.', 6000);
     }
@@ -1388,8 +1517,6 @@ $('#sClose').onclick = () => {
 document.body.classList.toggle('dmx', !!db.settings.showDmx);
 $('#bleWarn').hidden = Drivers.hasBle() || !db.fixtures.some(isBle);
 renderFixtures(); renderScenes(); transport.connect();
-
-
 </script>
 </body>
 </html>
