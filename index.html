@@ -256,6 +256,15 @@ body.dmx .mon{display:block}
   <label>Adresse de la passerelle <input id="sUrl" placeholder="ws://localhost:8080"></label>
   <label>Durée du fondu entre mémoires (s) <input id="sFade" type="number" min="0" max="60" step="0.5"></label>
   <label class="check"><input type="checkbox" id="sDmx"> Afficher les détails techniques (DMX)</label>
+  <label class="check"><input type="checkbox" id="sAll"> Bluetooth : afficher tous les appareils (si ton projecteur n'apparaît pas)</label>
+  <details id="sDiag">
+    <summary>Diagnostic et sauvegarde</summary>
+    <textarea id="sLog" rows="8" placeholder="Le journal Bluetooth s'affiche ici."></textarea>
+    <div class="row"><button type="button" id="sCopyLog" class="btn ghost small">Copier le journal</button>
+      <button type="button" id="sExport" class="btn ghost small">Exporter la config</button>
+      <button type="button" id="sImport" class="btn ghost small">Importer la config</button></div>
+    <p class="hint">Exporter copie ta config (projecteurs, mémoires) : colle-la dans tes notes. Importer : colle-la dans le cadre ci-dessus puis touche Importer.</p>
+  </details>
   <div class="row"><div class="spacer"></div><button id="sClose" class="btn">Fermer</button></div>
 </dialog>
 
@@ -805,6 +814,10 @@ body.dmx .mon{display:block}
   };
 
   /* ---------- Utilitaires Web Bluetooth ---------- */
+  /* Journal Bluetooth (affiché dans Réglages pour diagnostiquer sur le plateau) */
+  const logs = [], opts = { bleAll: false };
+  const hex = u => Array.from(u, x => x.toString(16).padStart(2, '0')).join(' ');
+  function log(msg) { logs.push(new Date().toLocaleTimeString('fr-FR') + '  ' + msg); if (logs.length > 300) logs.shift(); }
   const hasBle = () => typeof navigator !== 'undefined' && !!navigator.bluetooth;
   async function writeFast(ch, bytes) { // sans réponse si possible
     if (ch.writeValueWithoutResponse) return ch.writeValueWithoutResponse(bytes);
@@ -816,11 +829,20 @@ body.dmx .mon{display:block}
     constructor(fixture) { this.f = fixture; this.seq = 0; this.last = null; this.dev = null; this.rx = null; this.busy = false; this.pending = null; }
     get connected() { return !!(this.dev && this.dev.gatt && this.dev.gatt.connected); }
     async connect() {
-      this.dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [NL.svc] }], optionalServices: [NL.svc] });
-      this.dev.addEventListener('gattserverdisconnected', () => { this.rx = null; this.onChange && this.onChange(); });
+      log('Nanlite : recherche' + (opts.bleAll ? ' (tous appareils)' : ''));
+      const optional = [NL.svc, 0x1828, 0x1827, 0x180a];
+      this.dev = await navigator.bluetooth.requestDevice(opts.bleAll
+        ? { acceptAllDevices: true, optionalServices: optional }
+        : { filters: [{ services: [NL.svc] }], optionalServices: optional });
+      log('Appareil choisi : ' + (this.dev.name || '(sans nom)'));
+      this.dev.addEventListener('gattserverdisconnected', () => { log('Déconnecté : ' + (this.dev.name || '')); this.rx = null; this.onChange && this.onChange(); });
       const server = await this.dev.gatt.connect();
-      const svc = await server.getPrimaryService(NL.svc);
+      try { const all = await server.getPrimaryServices(); log('Services : ' + all.map(s => s.uuid.slice(0, 8)).join(', ')); } catch (e) { log('Services illisibles : ' + e.message); }
+      let svc;
+      try { svc = await server.getPrimaryService(NL.svc); }
+      catch { log('Service Nanlite (0003cdd0) ABSENT : ce projecteur ne parle pas ce protocole'); throw new Error("Ce projecteur n'expose pas le service Bluetooth Nanlite attendu."); }
       this.rx = await svc.getCharacteristic(NL.rx);
+      log("Connecté, canal d'écriture prêt");
       try { const tx = await svc.getCharacteristic(NL.tx); await tx.startNotifications(); } catch { /* optionnel */ }
       this.last = null;
       this.onChange && this.onChange();
@@ -828,6 +850,7 @@ body.dmx .mon{display:block}
     disconnect() { try { this.dev && this.dev.gatt.disconnect(); } catch { /* déjà fermé */ } }
     nextSeq() { this.seq = (this.seq + 1) & 0xff; return this.seq; }
     async write(frame) { // fragments de 20 octets ; le dernier avec réponse
+      log('→ ' + hex(frame));
       for (let i = 0; i < frame.length; i += 20) {
         const part = frame.slice(i, i + 20), lastPart = i + 20 >= frame.length;
         if (lastPart && this.rx.writeValueWithResponse) await this.rx.writeValueWithResponse(part);
@@ -848,7 +871,7 @@ body.dmx .mon{display:block}
           this.last = { ...s };
           await sleep(60);
         }
-      } catch (e) { this.error = e; } finally { this.busy = false; }
+      } catch (e) { this.error = e; log("Erreur d'envoi : " + (e && e.message)); } finally { this.busy = false; }
     }
   }
 
@@ -865,8 +888,10 @@ body.dmx .mon{display:block}
     get connected() { return !!(this.dev && this.dev.gatt && this.dev.gatt.connected && this.inCh); }
     nextSeq(n = 1) { const s = this.net.seq; this.net.seq = (s + n) & 0xffffff; this.onSeq(this.net.seq); return s; }
     async openProxy() {
+      log('Mesh : recherche proxy');
       this.dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [PROXY] }], optionalServices: [PROXY] });
-      this.dev.addEventListener('gattserverdisconnected', () => { this.inCh = null; this.onChange && this.onChange(); });
+      log('Mesh : ' + (this.dev.name || '(sans nom)'));
+      this.dev.addEventListener('gattserverdisconnected', () => { log('Mesh déconnecté'); this.inCh = null; this.onChange && this.onChange(); });
       const server = await this.dev.gatt.connect();
       const svc = await server.getPrimaryService(PROXY);
       this.inCh = await svc.getCharacteristic(PROXY_IN);
@@ -981,7 +1006,7 @@ body.dmx .mon{display:block}
     }
   }
 
-  const api = { nanlite, NanliteLink, MeshLink, hasBle, nlFrame };
+  const api = { nanlite, NanliteLink, MeshLink, hasBle, nlFrame, logs, log, opts };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Drivers = api;
 })(typeof self !== 'undefined' ? self : globalThis);
 </script>
@@ -1610,17 +1635,31 @@ $('#scenes').addEventListener('click', e => {
 const dS = $('#dSettings');
 $('#btnSettings').onclick = () => {
   $('#sTransport').value = db.settings.transport; $('#sUrl').value = db.settings.url; $('#sFade').value = db.settings.fade;
-  $('#sDmx').checked = !!db.settings.showDmx;
+  $('#sDmx').checked = !!db.settings.showDmx; $('#sAll').checked = !!db.settings.bleAll;
+  $('#sLog').value = Drivers.logs.join('\n') || "(rien pour l'instant)";
   dS.showModal();
 };
 $('#sClose').onclick = () => {
   db.settings.transport = $('#sTransport').value;
   db.settings.url = $('#sUrl').value.trim() || db.settings.url;
   db.settings.fade = clamp(+$('#sFade').value || 0, 0, 60);
-  db.settings.showDmx = $('#sDmx').checked;
+  db.settings.showDmx = $('#sDmx').checked; db.settings.bleAll = $('#sAll').checked; Drivers.opts.bleAll = db.settings.bleAll;
   document.body.classList.toggle('dmx', db.settings.showDmx);
   save(); dS.close(); transport.connect();
 };
+
+const copy = async t => { try { await navigator.clipboard.writeText(t); toast('Copié ✓'); } catch { $('#sLog').select(); toast('Sélectionné : copie-le à la main'); } };
+$('#sCopyLog').onclick = () => { $('#sLog').value = Drivers.logs.join('\n') || ''; copy($('#sLog').value); };
+$('#sExport').onclick = () => { const t = JSON.stringify({ lumi: 1, ...db, fixtures: db.fixtures.map(({ anim, _sig, ...f }) => f) }); $('#sLog').value = t; copy(t); };
+$('#sImport').onclick = () => {
+  try {
+    const j = JSON.parse($('#sLog').value);
+    if (!j || !Array.isArray(j.fixtures)) throw new Error('config');
+    Object.assign(db, { fixtures: j.fixtures, scenes: j.scenes || [], networks: j.networks || [], profiles: { ...DEFAULT_PROFILES, ...(j.profiles || {}) }, settings: { ...db.settings, ...(j.settings || {}) } });
+    save(); renderFixtures(); renderScenes(); toast('Config importée ✓');
+  } catch { toast('Texte invalide : colle une config exportée dans le cadre'); }
+};
+Drivers.opts.bleAll = !!db.settings.bleAll;
 
 /* ---------- Démarrage ---------- */
 document.body.classList.toggle('dmx', !!db.settings.showDmx);
