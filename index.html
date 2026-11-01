@@ -51,7 +51,8 @@ input[type=checkbox]{width:26px;height:26px;min-height:0;accent-color:var(--acc)
 #panel.disabled{opacity:.45;pointer-events:none}
 dialog{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(92vw,520px)}
 dialog::backdrop{background:#000a}
-dialog form,dialog{display:grid;gap:12px}
+dialog[open],dialog form{display:grid;gap:12px}
+dialog:not([open]){display:none}
 dialog form{display:grid;gap:12px}
 textarea{min-height:260px;font:13px ui-monospace,monospace;resize:vertical}
 code{background:#0e0f12;padding:1px 5px;border-radius:5px}
@@ -179,6 +180,13 @@ body.dmx .mon{display:block}
       <p id="fBleHint" class="hint"></p>
     </div>
     <label>Groupe <input id="fGroup" placeholder="ex. Contres, Fond…"></label>
+    <details id="fKel">
+      <summary>Plage Kelvin (si elle est fausse)</summary>
+      <div class="row">
+        <label class="grow">Min (K) <input id="fKmin" type="number" min="1000" max="30000" step="100"></label>
+        <label class="grow">Max (K) <input id="fKmax" type="number" min="1000" max="30000" step="100"></label>
+      </div>
+    </details>
     <details id="fDmxAdv">
       <summary>Avancé (connexion, DMX…)</summary>
       <label id="fConnWrap">Connexion
@@ -263,66 +271,149 @@ body.dmx .mon{display:block}
   const C = (a, b) => ({ t: 'rgb', k: [a, b] });
   const m = (n, o) => ({ n, ...o });
 
+  const BR = (id, label, ble, models) => ({ id, label, ble, models });
+  const A = (name, spec, extra) => m(name, { ...spec, ...(extra || {}) });
+  const AST = { p: 'astera-dim-rgbw' };
+
   const CATALOG = [
-    { id: 'amaran', label: 'Aputure / Amaran', ble: true, models: [
-      m('amaran 60d', D(5600)), m('amaran 60x', B(2700, 6500)), m('amaran 60x S', B(2700, 6500)),
-      m('amaran 100d', D(5600)), m('amaran 100x', B(2700, 6500)), m('amaran 100x S', B(2700, 6500)),
-      m('amaran 200d', D(5600)), m('amaran 200x', B(2700, 6500)), m('amaran 200x S', B(2700, 6500)),
-      m('amaran 300x', B(2700, 6500)), m('amaran 400x', B(2700, 6500)),
-      m('amaran 150c', C(2500, 7500)), m('amaran 300c', C(2500, 7500)),
-      m('amaran Tube T2c / T4c', C(2500, 7500)), m('amaran F22c', C(2500, 7500)),
-      m('Aputure LS 600d Pro', D(5600)), m('Aputure LS 600x Pro', B(2700, 6500)), m('Aputure LS 1200d Pro', D(5600)),
-      m('Aputure Nova P300c', C(2500, 7500)), m('Aputure Infinibar PB12', C(2000, 10000)), m('Aputure MC', C(2000, 10000)),
-      m('Autre Amaran / Aputure — lumière du jour', D(5600)),
-      m('Autre Amaran / Aputure — bicolore', B(2700, 6500)),
-      m('Autre Amaran / Aputure — couleur (RVB)', C(2500, 7500)),
-    ] },
-    { id: 'godox', label: 'Godox', ble: true, models: [
-      m('SL60W', D(5600)), m('SL60IIBi', B(2800, 6500)), m('SL100Bi', B(2800, 6500)),
-      m('SL150II', D(5600)), m('SL150IIBi', B(2800, 6500)), m('SL200II', D(5600)), m('SL200IIBi', B(2800, 6500)),
-      m('SL300II', D(5600)), m('SL300IIBi', B(2800, 6500)),
-      m('UL150', D(5600)), m('UL150Bi', B(2800, 6500)),
-      m('VL150', D(5600)), m('VL200', D(5600)), m('VL300', D(5600)),
-      m('ML30', D(5600)), m('ML30Bi', B(2800, 6500)), m('ML60', D(5600)), m('ML60Bi', B(2800, 6500)),
-      m('KNOWLED M200Bi', B(2800, 6500)), m('KNOWLED M600Bi', B(2800, 6500)), m('KNOWLED MG1200Bi', B(2800, 6500)),
-      m('M1 (RVB)', C(2500, 8500)), m('LC500R / LC500R mini (RVB)', C(2500, 8500)), m('SZ150R (RVB)', C(2500, 8500)),
-      m('TL30 / TL60 / TL120 (tube RVB)', C(2700, 6500)),
-      m('Autre Godox — lumière du jour', D(5600)),
-      m('Autre Godox — bicolore', B(2800, 6500)),
-      m('Autre Godox — couleur (RVB)', C(2500, 8500)),
-    ] },
-    { id: 'nanlite', label: 'Nanlite / Nanlux', ble: true, models: [
-      m('Forza 60', D(5600)), m('Forza 60B', B(2700, 6500)),
-      m('Forza 150', D(5600)), m('Forza 150B', B(2700, 6500)),
-      m('Forza 300 / 300 II', D(5600)), m('Forza 300B', B(2700, 6500)),
-      m('Forza 500', D(5600)), m('Forza 500B', B(2700, 6500)),
-      m('Forza 720', D(5600)), m('Forza 720B', B(2700, 6500)),
-      m('FS-150 / FS-200 / FS-300', D(5600)), m('FS-150B / FS-200B / FS-300B', B(2700, 6500)),
-      m('PavoTube II 6C / 15C / 30C', C(2700, 7500)),
-      m('Pavo Slim 60C / 120C', C(2700, 7500)),
-      m('Autre Nanlite — lumière du jour', D(5600)),
-      m('Autre Nanlite — bicolore', B(2700, 6500)),
-      m('Autre Nanlite — couleur (RVB)', C(2700, 7500)),
-    ] },
-    { id: 'astera', label: 'Astera', ble: false, models: [
-      m('Titan Tube', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
-      m('Helios Tube', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
-      m('Hyperion Tube', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
-      m('AX1 PixelBrick', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
-      m('AX3 LightDrop', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
-      m('AX5 TriplePar', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
-      m('AX10 SpotMax', { ...C(1800, 10000), p: 'astera-dim-rgbw' }),
-    ] },
-    { id: 'dmx', label: 'Autre marque (DMX)', ble: false, models: [
-      m('Gradateur simple (1 canal)', { t: 'dim', p: 'dimmer-1' }),
-      m('Lumière du jour + gradateur (1 canal)', { ...D(5600), p: 'dimmer-1' }),
-      m('Bicolore — dim + CCT (2 canaux)', { ...B(2700, 6500), p: 'bicolor-dimcct' }),
-      m('Bicolore — chaud + froid (2 canaux)', { ...B(2700, 6500), p: 'bicolor-warmcool' }),
-      m('RVB (3 canaux)', { ...C(2000, 10000), p: 'rgb-3' }),
-      m('Dim + RVB (4 canaux)', { ...C(2000, 10000), p: 'dim-rgb-4' }),
-      m('RVBW (4 canaux)', { ...C(2000, 10000), p: 'rgbw-4' }),
-      m('RVB + chaud + froid (5 canaux)', { ...C(2000, 10000), p: 'rgbww-5' }),
-    ] },
+    BR('amaran', 'Aputure / Amaran', true, [
+      A('amaran 60d', D(5600)), A('amaran 60x', B(2700, 6500)), A('amaran 60d S', D(5600)), A('amaran 60x S', B(2700, 6500)),
+      A('amaran 100d', D(5600)), A('amaran 100x', B(2700, 6500)), A('amaran 100d S', D(5600)), A('amaran 100x S', B(2700, 6500)),
+      A('amaran 200d', D(5600)), A('amaran 200x', B(2700, 6500)), A('amaran 200d S', D(5600)), A('amaran 200x S', B(2700, 6500)),
+      A('amaran 300x', B(2700, 6500)), A('amaran 400x', B(2700, 6500)),
+      A('amaran 150c', C(2500, 7500)), A('amaran 300c', C(2500, 7500)),
+      A('amaran Ray 660c', C(2000, 10000)), A('amaran Ray 220c', C(2000, 10000)),
+      A('amaran F21c', C(2500, 7500)), A('amaran F22c', C(2500, 7500)),
+      A('amaran T2c (tube 60 cm)', C(2500, 7500)), A('amaran T4c (tube 120 cm)', C(2500, 7500)),
+      A('amaran PT1c / PT2c / PT4c (tubes pixel)', C(2000, 10000)),
+      A('amaran Ace 25c / 25x', C(2500, 7500)),
+      A('Aputure LS 60d', D(5600)), A('Aputure LS 60x', B(2700, 6500)),
+      A('Aputure LS 300d II', D(5600)), A('Aputure LS 300x', B(2700, 6500)),
+      A('Aputure LS C120d II', D(5600)), A('Aputure LS C120t', { t: 'tung', k: [3200, 3200] }),
+      A('Aputure LS C300d II', D(5600)), A('Aputure LS C300x', B(2700, 6500)),
+      A('Aputure LS 600d', D(5600)), A('Aputure LS 600d Pro', D(5600)), A('Aputure LS 600x Pro', B(2700, 6500)),
+      A('Aputure LS 600c Pro', C(2300, 10000)), A('Aputure LS 600c Pro II', C(2300, 10000)),
+      A('Aputure LS 1200d Pro', D(5600)), A('Aputure STORM 1200x', B(2700, 6500)), A('Aputure STORM 80c', C(2000, 10000)),
+      A('Aputure Nova P300c', C(2000, 10000)), A('Aputure Nova II 2x1', C(2000, 10000)),
+      A('Aputure INFINIBAR PB3 / PB6 / PB12', C(2000, 10000)), A('Aputure INFINIMAT', C(2000, 10000)),
+      A('Aputure MC / MC Pro', C(2000, 10000)), A('Aputure B7c / Accent B7c', C(2000, 10000)),
+      A('Autre Amaran / Aputure — lumière du jour', D(5600)),
+      A('Autre Amaran / Aputure — bicolore', B(2700, 6500)),
+      A('Autre Amaran / Aputure — couleur', C(2000, 10000)),
+    ]),
+    BR('godox', 'Godox', true, [
+      A('SL60W', D(5600)), A('SL60IID', D(5600)), A('SL60IIBi', B(2800, 6500)),
+      A('SL100D', D(5600)), A('SL100Bi', B(2800, 6500)),
+      A('SL150W', D(5600)), A('SL150II', D(5600)), A('SL150IIBi', B(2800, 6500)),
+      A('SL150III', D(5600)), A('SL150IIIBi', B(2800, 6500)), A('SL150R (RVB)', C(2500, 10000)),
+      A('SL200W', D(5600)), A('SL200II', D(5600)), A('SL200IIBi', B(2800, 6500)), A('SL200III', D(5600)), A('SL200IIIBi', B(2800, 6500)),
+      A('SL300II', D(5600)), A('SL300IIBi', B(2800, 6500)), A('SL300III', D(5600)), A('SL300IIIBi', B(2800, 6500)), A('SL300R (RVB)', C(2500, 10000)),
+      A('S30', D(5600)), A('S60', D(5600)), A('S60Bi', B(2800, 6500)),
+      A('UL60', D(5600)), A('UL60Bi', B(2800, 6500)), A('UL150', D(5600)), A('UL150Bi', B(2800, 6500)), A('UL150IIBi', B(2800, 5600)),
+      A('VL150', D(5600)), A('VL200', D(5600)), A('VL300', D(5600)), A('VL300II', D(5600)),
+      A('ML30', D(5600)), A('ML30Bi', B(2800, 6500)), A('ML60', D(5600)), A('ML60Bi', B(2800, 6500)), A('ML60IIBi', B(2800, 6500)),
+      A('ML100Bi', B(2800, 6500)), A('ML100R (RVB)', C(1800, 10000)),
+      A('P260C Pro', B(2800, 6500)), A('LEDP120C / LEDP260C', B(3300, 5600)),
+      A('LDP8D / LDP18D', D(5600)), A('LDP8Bi / LDP18Bi', B(2800, 6500)),
+      A('LD75R (RVB)', C(2500, 8500)), A('LD150R / LD150RS (RVB)', C(2500, 8500)),
+      A('LDX50R / LDX100R (RVB)', C(2500, 10000)), A('LDX50Bi / LDX100Bi', B(2800, 6500)),
+      A('LED1000DII', D(5600)), A('LED1000BiII', B(3300, 5600)), A('LED308 II (C)', B(3300, 5600)), A('LF308D', D(5600)), A('LF308Bi', B(3300, 5600)),
+      A('KNOWLED M200D', D(5600)), A('KNOWLED M200Bi', B(2800, 6500)), A('KNOWLED M600D', D(5600)), A('KNOWLED M600Bi', B(2800, 6500)),
+      A('KNOWLED MG1200Bi', B(2800, 6500)), A('KNOWLED MG600Bi', B(2800, 6500)), A('KNOWLED MG1200R (RVB)', C(2500, 8500)),
+      A('KNOWLED F200Bi / F22Bi', B(2700, 8500)), A('KNOWLED F400Bi', B(2700, 8500)), A('KNOWLED F600Bi', B(2700, 8500)),
+      A('FH50R (RVB)', C(2500, 10000)), A('FH50Bi', B(2800, 6500)),
+      A('FL60 / FL100 / FL150S (tapis flexible)', B(3300, 5600)), A('FL100R / FL150R / FL200R / FL200SR (tapis RVB)', C(1800, 10000)),
+      A('FV150', D(5600)),
+      A('LA150D / LA200D (Litemons)', D(5600)), A('LA150Bi / LA200Bi / LA300Bi', B(2800, 6500)), A('LA600Bi', B(2800, 6500)),
+      A('LA150R / LA200R / LA300R / LA600R (RVB)', C(1800, 10000)),
+      A('LP400Bi / LP600Bi / LP1200Bi', B(2800, 6500)), A('LP400R / LP600R / LP1200R (RVB)', C(1800, 10000)),
+      A('LC500R / LC500R mini (RVB)', C(2500, 8500)), A('LC500 mini', C(2500, 8500)), A('LC1000R (RVB)', C(2500, 8500)), A('LC1000Bi', B(2500, 8500)),
+      A('LED6Bi (Litemons)', B(3200, 6500)), A('SR20R (Litemons)', C(1800, 10000)),
+      A('WT25D / WT40D / WT60D', D(5600)), A('WT25R / WT40R / WT60R (RVB)', C(1800, 10000)),
+      A('ES30 / ES45', B(2800, 6500)), A('MA5R', C(1800, 10000)),
+      A('R1 (RVB)', C(2500, 8500)), A('M1 (RVB)', C(2500, 8500)),
+      A('TL30 / TL60 / TL120 / TL180 (tube RVB)', C(2700, 6500)),
+      A('Autre Godox — lumière du jour', D(5600)),
+      A('Autre Godox — bicolore', B(2800, 6500)),
+      A('Autre Godox — couleur (RVB)', C(1800, 10000)),
+    ]),
+    BR('nanlite', 'Nanlite / Nanlux', true, [
+      A('Forza 60', D(5600)), A('Forza 60B', B(2700, 6500)), A('Forza 60 II', D(5600)), A('Forza 60B II', B(2700, 6500)),
+      A('Forza 60C', C(1800, 20000)), A('Forza 60CR', C(1800, 20000)),
+      A('Forza 150', D(5600)), A('Forza 150B', B(2700, 6500)),
+      A('Forza 300', D(5600)), A('Forza 300B', B(2700, 6500)), A('Forza 300 II', D(5600)), A('Forza 300B II', B(2700, 6500)),
+      A('Forza 500', D(5600)), A('Forza 500B', B(2700, 6500)), A('Forza 500 II', D(5600)), A('Forza 500B II', B(2700, 6500)),
+      A('Forza 720', D(5600)), A('Forza 720B', B(2700, 6500)),
+      A('FC-60B', B(2700, 6500)), A('FC-120B', B(2700, 6500)), A('FC-120C', C(1800, 20000)),
+      A('FC-300B', B(2700, 6500)), A('FC-500C', C(1800, 20000)), A('FC-720B', B(2700, 6500)), A('FC-720C', C(1800, 20000)),
+      A('FC-1200C', C(2400, 12000)),
+      A('FS-60B', B(2700, 6500)), A('FS-150', D(5600)), A('FS-200', D(5600)), A('FS-300', D(5600)),
+      A('FS-150B', B(2700, 6500)), A('FS-200B', B(2700, 6500)), A('FS-300B', B(2700, 6500)), A('FS-300C', C(1800, 20000)),
+      A('Nanlux Evoke 150C', C(1800, 20000)), A('Nanlux Evoke 600C', C(1800, 20000)), A('Nanlux Evoke 900C', C(1800, 20000)),
+      A('Nanlux Evoke 1200', D(5600)), A('Nanlux Evoke 1200B', B(2700, 6500)), A('Nanlux Evoke 2400B', B(2700, 6500)),
+      A('Nanlux Evoke 5000B', B(2700, 6500)),
+      A('Nanlux Dyno 650C', C(2700, 10000)), A('Nanlux Dyno 1200C', C(2700, 10000)),
+      A('PavoTube II 6C / 15C / 30C', C(2700, 7500)), A('PavoTube II 6XR', C(2700, 7500)),
+      A('PavoTube II 15X / 30X', B(2700, 7500)), A('PavoTube T8-7X', C(2700, 7500)),
+      A('PavoSlim 60B', B(2700, 6500)), A('PavoSlim 60C / 120C / 240C', C(2700, 7500)),
+      A('PavoBulb 10C', C(2700, 7500)),
+      A('MixPad II 11C / 27C', C(2700, 7500)), A('LitoLite 5C', C(2700, 7500)), A('miro 30c / 60c', C(2700, 7500)),
+      A('LumiPad 11 / 25', B(3200, 5600)), A('LED 600CSA / 1200CSA', C(2700, 7500)),
+      A('Compac 20B / 40B / 68B / 100B', B(2700, 6500)),
+      A('Autre Nanlite — lumière du jour', D(5600)),
+      A('Autre Nanlite — bicolore', B(2700, 6500)),
+      A('Autre Nanlite — couleur', C(1800, 20000)),
+    ]),
+    BR('astera', 'Astera', false, [
+      A('Titan Tube', C(1800, 10000), AST), A('Helios Tube', C(1800, 10000), AST), A('Hyperion Tube (FP3, 2 m)', C(1800, 10000), AST),
+      A('AX1 PixelBrick', C(1800, 10000), AST), A('AX2 PixelBar 50 cm / 1 m', C(1800, 10000), AST),
+      A('AX3 LightDrop', C(1800, 10000), AST), A('AX5 TriplePAR', C(1800, 10000), AST), A('AX9 PowerPAR', C(1800, 10000), AST),
+      A('NYX Bulb', C(1800, 10000), AST), A('LeoFresnel AF250', C(1800, 10000), AST), A('PixelBrick PB15', C(1800, 10000), AST), A('LunaBulb', C(1800, 10000), AST), A('HydraPanel', C(1800, 10000), AST),
+      A('PlutoFresnel', C(1800, 10000), AST), A('QuikSpot / QuikPunch', C(1800, 10000), AST),
+    ]),
+    BR('arri', 'ARRI', false, [
+      A('SkyPanel S30-C', C(2800, 10000)), A('SkyPanel S60-C', C(2800, 10000)), A('SkyPanel S120-C', C(2800, 10000)), A('SkyPanel S360-C', C(2800, 10000)),
+      A('SkyPanel X23', C(2000, 10000)), A('Orbiter', C(2000, 20000)),
+      A('L5-C / L7-C / L10-C (Fresnel LED)', C(2000, 10000)), A('L7-DT / L10-DT (jour + tungstène)', B(2800, 6500)),
+      A('L7-TT / L10-TT (tungstène)', { t: 'tung', k: [3200, 3200] }),
+    ]),
+    BR('litepanels', 'Litepanels', false, [
+      A('Astra 1x1 Bi-Color', B(2700, 6500)), A('Astra 2x1 Bi-Color', B(2700, 6500)), A('Astra 6X / 3X Bi-Color', B(3200, 5600)),
+      A('Gemini 1x1 Soft', C(2700, 10000)), A('Gemini 2x1 Soft / Hard', C(2700, 10000)),
+      A('Sola 6 / Sola 9 / Sola 12 (Fresnel)', B(3200, 5600)),
+    ]),
+    BR('kinoflo', 'Kino Flo', false, [
+      A('Diva-Lite LED 20 / 30 / 31', B(2700, 6000)), A('Celeb 201 / 401 / 450 / 850', B(2700, 6000)),
+      A('Mimik 120 / 240', C(2500, 9900)), A('FreeStyle T / Air', B(2700, 6000)),
+    ]),
+    BR('lupo', 'Lupo', false, [
+      A('Dayled 650 / 1000 / 1500', B(3200, 5600)), A('Superpanel Dual Color', B(2800, 6500)), A('Superpanel Full Color', C(2800, 10000)),
+      A('Scenelight', B(2800, 6500)),
+    ]),
+    BR('creamsource', 'Creamsource', false, [
+      A('Vortex4 / Vortex8', C(1700, 20000)), A('Micro / Micro Colour', C(1700, 20000)), A('Mini / Mini Colour', C(1700, 20000)),
+      A('Doppio', C(1700, 20000)),
+    ]),
+    BR('quasar', 'Quasar Science', false, [
+      A('Rainbow 2 / Double Rainbow', C(2000, 10000)), A('Q-LED / Crossfade', B(2700, 6500)),
+    ]),
+    BR('rotolight', 'Rotolight', false, [
+      A('AEOS 2', C(2000, 10000)), A('Anova Pro 3', C(2000, 10000)), A('NEO 3', C(2000, 10000)), A('Titan X2', C(2000, 10000)),
+    ]),
+    BR('zhiyun', 'Zhiyun (Molus)', false, [
+      A('Molus X60', B(2700, 6500)), A('Molus X100', B(2700, 6500)), A('Molus X200 / X300 / X500', B(2700, 6500)),
+      A('Molus G60 / G200 (RVB)', C(2500, 10000)), A('Molus B100 / B200 / B500', B(2700, 6500)),
+    ]),
+    BR('dmx', 'Autre marque (DMX)', false, [
+      A('Gradateur simple (1 canal)', { t: 'dim', p: 'dimmer-1' }),
+      A('Lumière du jour + gradateur (1 canal)', { ...D(5600), p: 'dimmer-1' }),
+      A('Bicolore — dim + CCT (2 canaux)', { ...B(2700, 6500), p: 'bicolor-dimcct' }),
+      A('Bicolore — chaud + froid (2 canaux)', { ...B(2700, 6500), p: 'bicolor-warmcool' }),
+      A('RVB (3 canaux)', { ...C(2000, 10000), p: 'rgb-3' }),
+      A('Dim + RVB (4 canaux)', { ...C(2000, 10000), p: 'dim-rgb-4' }),
+      A('RVBW (4 canaux)', { ...C(2000, 10000), p: 'rgbw-4' }),
+      A('RVB + chaud + froid (5 canaux)', { ...C(2000, 10000), p: 'rgbww-5' }),
+    ]),
   ];
 
   /** Profil DMX par défaut selon le type de projecteur. */
@@ -704,7 +795,7 @@ body.dmx .mon{display:block}
       return nlFrame(concat(Uint8Array.of(seq, 0x24, 0x00, 0x04, 0x01, 0x01, 0x01), pay));
     },
     cct(seq, bri, kelvin, gm = 0) {
-      const k = Math.round(clamp(kelvin, 2700, 7500)), g = Math.round(clamp(gm, -100, 100)) & 0xffff;
+      const k = Math.round(clamp(kelvin, 1700, 20000)), g = Math.round(clamp(gm, -100, 100)) & 0xffff;
       return nanlite.mode(seq, bri, 0x02, 0x02, Uint8Array.of(0x01, k >> 8, k & 0xff, g >> 8, g & 0xff, 0x01));
     },
     hsi(seq, bri, hue, sat) {
@@ -1291,9 +1382,23 @@ const CAT = Catalog.CATALOG, brandOf = id => CAT.find(b => b.id === id);
 function fillProfiles() {
   $('#fProfile').innerHTML = '<option value="">Automatique</option>' + Object.entries(db.profiles).map(([k, p]) => `<option value="${esc(k)}">${esc(p.label || k)}</option>`).join('');
 }
+function fillKelvin(k) {
+  $('#fKmin').value = k ? k[0] : ''; $('#fKmax').value = k ? k[1] : '';
+}
 function fillModels() {
   const b = brandOf($('#fBrand').value);
   $('#fModel').innerHTML = b.models.map((m, i) => `<option value="${i}">${esc(m.n)}</option>`).join('');
+  fillKelvin(b.models[0] && b.models[0].k);
+}
+$('#fModel').onchange = () => fillKelvin((curModel() || {}).k);
+/* Plage Kelvin saisie (prioritaire sur le catalogue) ; élargir un modèle fixe le rend réglable. */
+function modelWithKelvin(model) {
+  if (!model || !model.k) return model;
+  const lo = +$('#fKmin').value, hi = +$('#fKmax').value;
+  if (!(lo >= 1000 && hi >= lo)) return model;
+  const out = { ...model, k: [lo, hi] };
+  if (hi > lo && (out.t === 'day' || out.t === 'tung')) out.t = 'bi';
+  return out;
 }
 const curModel = () => brandOf($('#fBrand').value).models[+$('#fModel').value] || null;
 function syncDialog(ev) {
@@ -1304,6 +1409,7 @@ function syncDialog(ev) {
   if (!b.ble) $('#fConn').value = 'dmx';
   const ble = $('#fConn').value === 'ble';
   $('#fNewOnly').hidden = !!editing;
+  $('#fKel').hidden = editing ? !editing.model : false;
   $('#fConnWrap').hidden = !!editing || !b.ble;
   $('#fProfileWrap').hidden = !!editing || ble;
   $('#fBleHint').textContent = ble ? BLE_HINTS[b.id]
@@ -1330,6 +1436,8 @@ function openFixture(f) {
   $('#fCount').value = 1;
   $('#fCountWrap').hidden = !!f;
   $('#dfDelete').hidden = !f;
+  if (f && f.model) fillKelvin(f.model.k);
+  $('#fKel').open = false;
   syncDialog();
   dF.showModal();
 }
@@ -1350,11 +1458,12 @@ $('#fFixture').onsubmit = e => {
   const name = $('#fName').value.trim(), group = $('#fGroup').value.trim();
   if (editing) {
     Object.assign(editing, { name, group });
+    if (editing.model) { editing.model = modelWithKelvin(editing.model); editing.state.cct = clamp(editing.state.cct, editing.model.k[0], editing.model.k[1]); }
     if (!isBle(editing)) Object.assign(editing, { universe: clamp(+$('#fUni').value || 0, 0, 32767), address: clamp(+$('#fAddr').value || 1, 1, 512) });
     dF.close(); save(); return renderFixtures();
   }
   const b = brandOf($('#fBrand').value), mdl = curModel();
-  const model = mdl ? { n: mdl.n, t: mdl.t, k: mdl.k } : null;
+  const model = mdl ? modelWithKelvin({ n: mdl.n, t: mdl.t, k: mdl.k }) : null;
   if ($('#fConn').value === 'dmx') {
     const profile = $('#fProfile').value || mdl?.p || Catalog.DMX_BY_TYPE[mdl?.t] || 'dimmer-1';
     const universe = clamp(+$('#fUni').value || 0, 0, 32767), address = clamp(+$('#fAddr').value || 1, 1, 512);
@@ -1517,6 +1626,13 @@ $('#sClose').onclick = () => {
 document.body.classList.toggle('dmx', !!db.settings.showDmx);
 $('#bleWarn').hidden = Drivers.hasBle() || !db.fixtures.some(isBle);
 renderFixtures(); renderScenes(); transport.connect();
+/* Garde l'écran allumé : sur iPhone, un écran verrouillé suspend la page et coupe le Bluetooth. */
+let wl = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && !wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); } } catch { /* refusé : tant pis */ }
+}
+document.addEventListener('pointerdown', keepAwake, { passive: true });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
 </script>
 </body>
 </html>
