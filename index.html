@@ -1,0 +1,1395 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e0f12">
+<style>:root{--bg:#0e0f12;--card:#17191e;--line:#262a31;--fg:#e8eaee;--mut:#8b93a1;--acc:#ffb547;--err:#ff6b6b;--ok:#4cd68a}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;-webkit-tap-highlight-color:transparent}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));background:#0e0f12ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:20px;letter-spacing:.5px}
+h2{margin:0;font-size:15px;text-transform:uppercase;letter-spacing:1px;color:var(--mut)}
+h2 small{color:var(--acc);margin-left:6px}
+h3{margin:0 0 12px}
+main{max-width:760px;margin:0 auto;padding:14px;padding-bottom:calc(30px + env(safe-area-inset-bottom));display:grid;gap:18px}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.spacer{flex:1}.grow{flex:1;min-width:140px}
+.hint{color:var(--mut);font-size:13px;margin:0}
+.err{color:var(--err);font-size:13px;min-height:1em;margin:8px 0 0}
+.btn{background:var(--acc);color:#1a1200;border:0;border-radius:10px;padding:10px 14px;font-weight:600;font-size:15px;min-height:44px;cursor:pointer}
+.btn.small{padding:6px 12px;min-height:36px;font-size:14px}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.btn.danger{background:var(--err);color:#200}
+.btn.on{background:var(--err);color:#200}
+.status{font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+.status.ok{color:var(--ok);border-color:var(--ok)}.status.err{color:var(--err);border-color:var(--err)}.status.wait{color:var(--acc);border-color:var(--acc)}
+label{display:grid;gap:6px;font-size:14px;color:var(--mut)}
+label output{float:right;color:var(--fg);font-variant-numeric:tabular-nums}
+input,select,textarea{background:#0e0f12;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;min-height:44px;width:100%}
+input[type=range]{padding:0;height:34px;accent-color:var(--acc);background:transparent;border:0}
+input[type=range].hue{background:linear-gradient(90deg,red,#ff0,#0f0,#0ff,#00f,#f0f,red);border-radius:99px;height:14px;margin:10px 0;-webkit-appearance:none;appearance:none}
+input[type=range].hue::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #000}
+input[type=range].hue::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #000}
+input[type=checkbox]{width:26px;height:26px;min-height:0;accent-color:var(--acc)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;background:transparent;color:var(--mut);border:0;padding:10px;font-size:15px;min-height:44px}
+.seg button.on{background:var(--acc);color:#1a1200;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:#0e0f12;border:1px solid var(--line);color:var(--fg);border-radius:99px;padding:8px 14px;min-height:40px;font-size:14px;cursor:pointer;user-select:none}
+.chip.on{border-color:var(--acc);color:var(--acc)}
+#fixtures{display:grid;gap:8px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;background:#0e0f12;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.card.sel{border-color:var(--acc)}
+.card .meta{min-width:0}.card .meta b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .meta small{color:var(--mut)}
+.card .line{grid-column:1/-1;display:flex;align-items:center;gap:10px}
+.card .line input{flex:1}.card .pct{width:3.2em;text-align:right;font-variant-numeric:tabular-nums}
+.card .mon{grid-column:1/-1;color:var(--mut);font:12px ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #fff3}
+#panel.disabled{opacity:.45;pointer-events:none}
+dialog{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(92vw,520px)}
+dialog::backdrop{background:#000a}
+dialog form,dialog{display:grid;gap:12px}
+dialog form{display:grid;gap:12px}
+textarea{min-height:260px;font:13px ui-monospace,monospace;resize:vertical}
+code{background:#0e0f12;padding:1px 5px;border-radius:5px}
+
+/* ---- Simplification : gros éléments tactiles ---- */
+.btn.off{background:#2a2d35;color:var(--fg)}
+.btn.off.on{background:var(--err);color:#200}
+.btn.icon{padding:0;width:44px;font-size:20px}
+.btn.add{width:100%;min-height:56px;font-size:17px;background:transparent;border:2px dashed var(--line);color:var(--acc)}
+.lbl{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);margin-top:4px}
+label.big{font-size:17px;color:var(--fg)}
+label.big input[type=range]{height:48px}
+label.check{display:flex;align-items:center;gap:10px;color:var(--fg)}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+details summary{cursor:pointer;color:var(--mut);min-height:28px}
+details[open] summary{margin-bottom:10px}
+details>*+*{margin-top:10px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px}
+.sw-btn{background:none;border:0;padding:0;display:grid;justify-items:center;gap:4px;color:var(--mut);font-size:12px;cursor:pointer}
+.sw-btn::before{content:'';width:52px;height:52px;border-radius:50%;background:var(--c);border:3px solid transparent;box-shadow:0 0 0 1px #fff2 inset}
+.sw-btn.on::before{border-color:#fff}
+.sw-btn.on{color:var(--fg)}
+.fxbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.fxbtns button{min-height:64px;border-radius:12px;border:1px solid var(--line);background:#0e0f12;color:var(--fg);font-size:22px;display:grid;place-items:center;gap:2px;cursor:pointer}
+.fxbtns button span{font-size:12px;color:var(--mut)}
+.fxbtns button.on{border-color:var(--acc);background:#2a2113}
+#fixtures{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.card .meta b{font-size:17px}
+.card .cdim{height:44px}
+.card .pct{font-size:18px}
+.adv,.mon{display:none}
+body.dmx .adv{display:block}
+body.dmx .mon{display:block}
+.stops{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stops button{min-height:48px;border-radius:10px;border:1px solid var(--line);background:#0e0f12;color:var(--fg);font-size:15px;cursor:pointer}
+.stops button:active{background:#2a2113}
+.warn{background:#3a2a0e;border:1px solid var(--acc);color:var(--fg);border-radius:12px;padding:12px;margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222730;border:1px solid var(--line);color:var(--fg);padding:12px 16px;border-radius:12px;max-width:90vw;z-index:20}
+.status-line{min-height:1.4em;margin:0;color:var(--acc)}
+.conn{margin-top:2px;min-height:32px;font-size:13px}
+.conn.ok{color:var(--ok);border-color:var(--ok)}
+</style>
+<title>Lumi</title>
+</head>
+<body>
+<header>
+  <h1>💡 Lumi</h1>
+  <span id="status" class="status sim">Essai</span>
+  <div class="spacer"></div>
+  <button id="blackout" class="btn off">Blackout</button>
+  <button id="btnSettings" class="btn ghost icon" aria-label="Réglages">⚙️</button>
+</header>
+
+<main>
+  <p id="bleWarn" class="warn" hidden>Le Bluetooth n'est pas disponible dans ce navigateur. Sur iPhone, ouvre cette page dans <b>Bluefy</b> (navigateur gratuit de l'App Store) pour piloter les projecteurs en Bluetooth.</p>
+  <section id="fixturesSec">
+    <div class="row">
+      <h2>Projecteurs</h2>
+      <div class="spacer"></div>
+      <button id="selAll" class="btn ghost small">Toutes</button>
+      <button id="selNone" class="btn ghost small">Aucun</button>
+    </div>
+    <div id="groups" class="chips"></div>
+    <div id="fixtures"></div>
+    <button id="addFixture" class="btn add">＋ Ajouter un projecteur</button>
+    <p id="empty" class="hint">Ajoute tes projecteurs (nom, type, adresse) pour monter ton plan de feu. Sans matériel, le mode essai simule la sortie.</p>
+  </section>
+
+  <section id="panel" class="disabled">
+    <h2>Réglages <small id="selCount">0</small></h2>
+    <p id="selHint" class="hint">Touche un ou plusieurs projecteurs ci-dessus.</p>
+
+    <label class="big">☀️ Intensité <output id="oDim">0%</output>
+      <input type="range" id="dim" min="0" max="100" step="0.5" value="0"></label>
+
+    <div class="stops">
+      <button data-stop="-1">−1 diaph</button><button data-stop="-0.3333">−⅓</button><button data-stop="0.3333">+⅓</button><button data-stop="1">+1 diaph</button>
+    </div>
+    <div class="lbl">Température / couleur</div>
+    <div id="swatches" class="swatches"></div>
+
+    <details>
+      <summary>Réglage fin (Kelvin, teinte)</summary>
+      <label>Température de couleur <output id="oCct">5600K</output>
+        <input type="range" id="cct" min="1700" max="10000" step="50" value="5600"></label>
+      <label>Teinte <output id="oHue">0°</output>
+        <input type="range" id="hue" class="hue" min="0" max="360" value="0"></label>
+      <label>Intensité de la couleur <output id="oSat">100%</output>
+        <input type="range" id="sat" min="0" max="100" value="100"></label>
+    </details>
+
+    <p id="fxNote" class="hint" hidden>Les effets ne fonctionnent pas en Bluetooth (trop lent) : ils sont réservés au DMX.</p>
+    <div class="lbl">Effet</div>
+    <div id="fxBtns" class="fxbtns">
+      <button data-fx="none">Fixe</button>
+      <button data-fx="strobe">⚡<span>Flash</span></button>
+      <button data-fx="pulse">💓<span>Pulse</span></button>
+      <button data-fx="flicker">🔥<span>Flamme</span></button>
+    </div>
+    <label id="spdRow" hidden>Vitesse <output id="oSpd">5</output>
+      <input type="range" id="fxSpeed" min="1" max="20" value="5"></label>
+  </section>
+
+  <section id="scenesSec">
+    <div class="row">
+      <h2>Mémoires</h2>
+      <div class="spacer"></div>
+      <button id="saveScene" class="btn small">＋ Mémoriser</button>
+    </div>
+    <div id="scenes" class="chips"></div>
+    <p class="hint">Une mémoire = l'état de tous les projecteurs (un plan, un décor). Appui long pour l'effacer.</p>
+  </section>
+</main>
+
+<dialog id="dFixture">
+  <form id="fFixture" method="dialog">
+    <h3 id="dfTitle">Nouveau projecteur</h3>
+    <label>Nom <input id="fName" required placeholder="ex. Contre jardin"></label>
+    <div id="fNewOnly">
+      <label>Connexion
+        <select id="fConn">
+          <option value="ble">Bluetooth (direct, sans boîtier)</option>
+          <option value="dmx">DMX / Art-Net (via la passerelle)</option>
+        </select></label>
+      <label id="fBrandWrap">Marque
+        <select id="fBrand">
+          <option value="nanlite">Nanlite / Nanlux</option>
+          <option value="godox">Godox</option>
+          <option value="amaran">Aputure / Amaran</option>
+        </select></label>
+      <p id="fBleHint" class="hint"></p>
+      <label id="fProfileWrap">Type de projecteur <select id="fProfile"></select></label>
+    </div>
+    <label>Groupe <input id="fGroup" placeholder="ex. Contres, Fond…"></label>
+    <details id="fDmxAdv">
+      <summary>Avancé (adresse DMX…)</summary>
+      <div class="row">
+        <label class="grow">Univers Art-Net <input id="fUni" type="number" min="0" max="32767" value="0"></label>
+        <label class="grow">Adresse DMX <input id="fAddr" type="number" min="1" max="512" value="1"></label>
+      </div>
+      <label id="fCountWrap">Nombre de projecteurs identiques (adresses à la suite) <input id="fCount" type="number" min="1" max="64" value="1"></label>
+      <button type="button" id="dfProfiles" class="btn ghost small">Modifier les types de projecteurs…</button>
+    </details>
+    <div class="row">
+      <button type="button" id="dfDelete" class="btn danger" hidden>Supprimer</button>
+      <div class="spacer"></div>
+      <button type="button" id="dfCancel" class="btn ghost">Annuler</button>
+      <button type="submit" class="btn">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dMesh">
+  <h3 id="dmTitle">Appairer le projecteur</h3>
+  <p id="dmText" class="hint"></p>
+  <p id="dmStatus" class="status-line"></p>
+  <p id="dmErr" class="err"></p>
+  <div class="row">
+    <button id="dmCancel" class="btn ghost">Fermer</button>
+    <div class="spacer"></div>
+    <button id="dmGo" class="btn">Chercher le projecteur</button>
+  </div>
+  <details>
+    <summary>J'ai déjà un réseau (clés)</summary>
+    <p class="hint">Colle un JSON : <code>{"brand":"amaran","netKey":"…32 hex…","appKey":"…32 hex…","nodes":[2,4,6]}</code></p>
+    <textarea id="dmImport" spellcheck="false" style="min-height:90px"></textarea>
+    <button id="dmImportGo" class="btn ghost small">Importer ce réseau</button>
+  </details>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+
+<dialog id="dProfiles">
+  <h3>Types de projecteurs (JSON)</h3>
+  <p class="hint">Chaque type liste ses canaux DMX dans l'ordre : <code>dim</code>, <code>cct</code>, <code>warm</code>, <code>cool</code>, <code>r</code>, <code>g</code>, <code>b</code>, <code>w</code>, <code>fixed</code> (avec <code>"v":0-255</code>). Compare avec le tableau DMX du manuel de ta lampe et de son mode.</p>
+  <textarea id="profilesText" spellcheck="false"></textarea>
+  <div class="row">
+    <button id="dpReset" class="btn ghost">Réinitialiser</button>
+    <div class="spacer"></div>
+    <button id="dpCancel" class="btn ghost">Fermer</button>
+    <button id="dpSave" class="btn">Enregistrer</button>
+  </div>
+  <p id="dpErr" class="err"></p>
+</dialog>
+
+<dialog id="dSettings">
+  <h3>Réglages</h3>
+  <label>Connexion
+    <select id="sTransport">
+      <option value="sim">Essai (sans lampes)</option>
+      <option value="bridge">Passerelle Art-Net</option>
+    </select></label>
+  <label>Adresse de la passerelle <input id="sUrl" placeholder="ws://localhost:8080"></label>
+  <label>Durée du fondu entre mémoires (s) <input id="sFade" type="number" min="0" max="60" step="0.5"></label>
+  <label class="check"><input type="checkbox" id="sDmx"> Afficher les détails techniques (DMX)</label>
+  <div class="row"><div class="spacer"></div><button id="sClose" class="btn">Fermer</button></div>
+</dialog>
+
+<script>'use strict';
+/* Cryptographie Bluetooth Mesh en JS pur (AES-128, CMAC, CCM, dérivations k1-k4, s1).
+   Pas de dépendance : WebCrypto n'offre ni AES-ECB, ni CMAC, ni CCM.
+   Vérifié contre l'implémentation Python de référence (voir tests/). */
+(function (root) {
+  const SBOX = new Uint8Array(256);
+  (function () {
+    let p = 1, q = 1;
+    do {
+      p = (p ^ (p << 1) ^ (p & 0x80 ? 0x11b : 0)) & 0xff;
+      q ^= q << 1; q ^= q << 2; q ^= q << 4; q &= 0xff;
+      if (q & 0x80) q ^= 0x09;
+      const rot = (x, n) => ((x << n) | (x >> (8 - n))) & 0xff;
+      SBOX[p] = (q ^ rot(q, 1) ^ rot(q, 2) ^ rot(q, 3) ^ rot(q, 4) ^ 0x63) & 0xff;
+    } while (p !== 1);
+    SBOX[0] = 0x63;
+  })();
+
+  const xtime = a => ((a << 1) ^ (a & 0x80 ? 0x1b : 0)) & 0xff;
+
+  function expandKey(key) {
+    const w = new Uint8Array(176); w.set(key);
+    let rcon = 1;
+    for (let i = 16; i < 176; i += 4) {
+      let t = [w[i - 4], w[i - 3], w[i - 2], w[i - 1]];
+      if (i % 16 === 0) {
+        t = [SBOX[t[1]] ^ rcon, SBOX[t[2]], SBOX[t[3]], SBOX[t[0]]];
+        rcon = xtime(rcon);
+      }
+      for (let j = 0; j < 4; j++) w[i + j] = w[i - 16 + j] ^ t[j];
+    }
+    return w;
+  }
+
+  /** Chiffre un bloc de 16 octets (AES-128, ECB). */
+  function aesBlock(key, block) {
+    const w = expandKey(key), s = Uint8Array.from(block);
+    const addKey = r => { for (let i = 0; i < 16; i++) s[i] ^= w[16 * r + i]; };
+    const sub = () => { for (let i = 0; i < 16; i++) s[i] = SBOX[s[i]]; };
+    const shift = () => {
+      const o = Uint8Array.from(s);
+      for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) s[4 * c + r] = o[4 * ((c + r) % 4) + r];
+    };
+    const mix = () => {
+      for (let c = 0; c < 4; c++) {
+        const a0 = s[4 * c], a1 = s[4 * c + 1], a2 = s[4 * c + 2], a3 = s[4 * c + 3];
+        s[4 * c]     = xtime(a0) ^ xtime(a1) ^ a1 ^ a2 ^ a3;
+        s[4 * c + 1] = a0 ^ xtime(a1) ^ xtime(a2) ^ a2 ^ a3;
+        s[4 * c + 2] = a0 ^ a1 ^ xtime(a2) ^ xtime(a3) ^ a3;
+        s[4 * c + 3] = xtime(a0) ^ a0 ^ a1 ^ a2 ^ xtime(a3);
+      }
+    };
+    addKey(0);
+    for (let r = 1; r < 10; r++) { sub(); shift(); mix(); addKey(r); }
+    sub(); shift(); addKey(10);
+    return s;
+  }
+
+  const concat = (...arrs) => {
+    const out = new Uint8Array(arrs.reduce((n, a) => n + a.length, 0));
+    let o = 0; for (const a of arrs) { out.set(a, o); o += a.length; }
+    return out;
+  };
+  const ascii = s => Uint8Array.from(s, c => c.charCodeAt(0));
+  const hex = b => Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+  const unhex = h => Uint8Array.from(h.match(/../g) || [], x => parseInt(x, 16));
+  const be = (n, len) => { const o = new Uint8Array(len); for (let i = len - 1; i >= 0; i--) { o[i] = n & 0xff; n = Math.floor(n / 256); } return o; };
+
+  function shiftLeft(b) {
+    const o = new Uint8Array(16); let carry = 0;
+    for (let i = 15; i >= 0; i--) { o[i] = ((b[i] << 1) | carry) & 0xff; carry = b[i] >> 7; }
+    return o;
+  }
+
+  /** AES-CMAC (RFC 4493). */
+  function cmac(key, msg) {
+    const L = aesBlock(key, new Uint8Array(16));
+    const k1 = shiftLeft(L); if (L[0] & 0x80) k1[15] ^= 0x87;
+    const k2 = shiftLeft(k1); if (k1[0] & 0x80) k2[15] ^= 0x87;
+    const n = Math.max(1, Math.ceil(msg.length / 16));
+    const complete = msg.length > 0 && msg.length % 16 === 0;
+    let x = new Uint8Array(16);
+    for (let i = 0; i < n - 1; i++) {
+      for (let j = 0; j < 16; j++) x[j] ^= msg[16 * i + j];
+      x = aesBlock(key, x);
+    }
+    const last = new Uint8Array(16);
+    const rem = msg.length - 16 * (n - 1);
+    last.set(msg.subarray(16 * (n - 1)));
+    if (complete) for (let j = 0; j < 16; j++) last[j] ^= k1[j];
+    else { last[rem] = 0x80; for (let j = 0; j < 16; j++) last[j] ^= k2[j]; }
+    for (let j = 0; j < 16; j++) x[j] ^= last[j];
+    return aesBlock(key, x);
+  }
+
+  /** AES-CCM (RFC 3610), nonce de 13 octets (L=2), sans données associées. Retourne chiffré || MIC. */
+  function ccmEncrypt(key, nonce, plain, micLen) {
+    if (nonce.length !== 13) throw new Error('nonce CCM : 13 octets attendus');
+    const b0 = concat(Uint8Array.of((((micLen - 2) / 2) << 3) | 1), nonce, be(plain.length, 2));
+    let x = aesBlock(key, b0);
+    for (let i = 0; i < plain.length; i += 16) {
+      const blk = new Uint8Array(16); blk.set(plain.subarray(i, i + 16));
+      for (let j = 0; j < 16; j++) x[j] ^= blk[j];
+      x = aesBlock(key, x);
+    }
+    const ctr = i => aesBlock(key, concat(Uint8Array.of(1), nonce, be(i, 2)));
+    const s0 = ctr(0);
+    const out = new Uint8Array(plain.length + micLen);
+    for (let i = 0; i < plain.length; i += 16) {
+      const ks = ctr(i / 16 + 1);
+      for (let j = 0; j < 16 && i + j < plain.length; j++) out[i + j] = plain[i + j] ^ ks[j];
+    }
+    for (let j = 0; j < micLen; j++) out[plain.length + j] = x[j] ^ s0[j];
+    return out;
+  }
+
+  const s1 = m => cmac(new Uint8Array(16), m);
+  const k1 = (n, salt, p) => cmac(cmac(salt, n), p);
+
+  function k2(netKey) {
+    const t = cmac(s1(ascii('smk2')), netKey), p = Uint8Array.of(0);
+    const t1 = cmac(t, concat(p, Uint8Array.of(1)));
+    const t2 = cmac(t, concat(t1, p, Uint8Array.of(2)));
+    const t3 = cmac(t, concat(t2, p, Uint8Array.of(3)));
+    return { nid: t1[15] & 0x7f, encKey: t2, privKey: t3 };
+  }
+  function k3(netKey) {
+    const t = cmac(s1(ascii('smk3')), netKey);
+    return cmac(t, ascii('id64\x01')).slice(8);
+  }
+  function k4(appKey) {
+    const t = cmac(s1(ascii('smk4')), appKey);
+    return cmac(t, ascii('id6\x01'))[15] & 0x3f;
+  }
+
+  /** Brouille l'en-tête d'un PDU réseau : pdu = [IVI|NID, CTL/TTL, SEQ(3), SRC(2), payload chiffré…]. */
+  function obfuscate(pdu, privKey, ivIndex) {
+    const plain = concat(new Uint8Array(5), be(ivIndex, 4), pdu.subarray(7, 14));
+    const pecb = aesBlock(privKey, plain);
+    const out = Uint8Array.from(pdu);
+    for (let i = 1; i < 7; i++) out[i] = pdu[i] ^ pecb[i - 1];
+    return out;
+  }
+
+  const randomBytes = n => crypto.getRandomValues(new Uint8Array(n));
+
+  /* ---------- Courbe P-256 (WebCrypto) pour l'enrôlement ---------- */
+  async function p256Keypair() {
+    const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+    const raw = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+    return { priv: kp.privateKey, pub: raw.slice(1) }; // X||Y (64 octets)
+  }
+  async function ecdh(priv, peerPub64) {
+    const peer = await crypto.subtle.importKey('raw', concat(Uint8Array.of(4), peerPub64), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    return new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: peer }, priv, 256));
+  }
+
+  const api = { aesBlock, cmac, ccmEncrypt, s1, k1, k2, k3, k4, obfuscate, randomBytes, p256Keypair, ecdh, concat, ascii, hex, unhex, be };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MeshCrypto = api;
+})(typeof self !== 'undefined' ? self : globalThis);
+
+'use strict';
+/* Bluetooth Mesh : paquets réseau/transport, enrôlement PB-GATT, configuration, trames Godox & Amaran.
+   Portage de godox_mesh_bt (binary-person/ha-godox-mesh) et amaran-BLE-control (clwill), vérifié par tests croisés. */
+(function (root) {
+  const C = root.MeshCrypto || require('./mesh-crypto.js');
+  const { concat, be, k2, k4, ccmEncrypt, obfuscate, cmac, s1, k1, ascii } = C;
+
+  const MAX_UNSEG = 11, SEG = 12, MAX_SEGS = 32;
+
+  const nonce = (type, seq, src, dst, iv) => concat(Uint8Array.of(type, 0), be(seq, 3), be(src, 2), be(dst, 2), be(iv, 4));
+
+  function encryptApp(payload, appKey, iv, seq, src, dst) {
+    return concat(Uint8Array.of(0x40 | k4(appKey)), ccmEncrypt(appKey, nonce(1, seq, src, dst, iv), payload, 4));
+  }
+  function encryptDev(payload, devKey, iv, seq, src, dst) {
+    return concat(Uint8Array.of(0x00), ccmEncrypt(devKey, nonce(2, seq, src, dst, iv), payload, 4));
+  }
+  function networkBody(dst, lower, encKey, iv, seq, src, ttl, ctl) {
+    const ctlTtl = (ctl << 7) | (ttl & 0x7f);
+    const n = concat(Uint8Array.of(0, ctlTtl), be(seq, 3), be(src, 2), Uint8Array.of(0, 0), be(iv, 4));
+    const enc = ccmEncrypt(encKey, n, concat(be(dst, 2), lower), ctl ? 8 : 4);
+    return concat(Uint8Array.of(ctlTtl), be(seq, 3), be(src, 2), enc);
+  }
+  function segmentUpper(header, upper, seqZero) {
+    const count = Math.ceil(upper.length / SEG);
+    if (count < 1 || count > MAX_SEGS) throw new Error('PDU trop long pour être segmenté');
+    const segN = count - 1; seqZero &= 0x1fff;
+    const out = [];
+    for (let o = 0; o < count; o++) {
+      out.push(concat(
+        Uint8Array.of(0x80 | (header & 0x7f), (seqZero >> 6) & 0x7f, ((seqZero & 0x3f) << 2) | (o >> 3), ((o & 7) << 5) | segN),
+        upper.subarray(o * SEG, (o + 1) * SEG)));
+    }
+    return out;
+  }
+  function packLower(lowers, netKey, iv, seq, src, dst, ttl, ctl = 0) {
+    const { nid, encKey, privKey } = k2(netKey);
+    const byte0 = ((iv & 1) << 7) | nid;
+    return lowers.map((lower, i) => {
+      const body = networkBody(dst, lower, encKey, iv, seq + i, src, ttl, ctl);
+      return concat(Uint8Array.of(0), obfuscate(concat(Uint8Array.of(byte0), body), privKey, iv));
+    });
+  }
+  function lowerPdus(encrypted, seq, accessLen) {
+    return accessLen <= MAX_UNSEG ? [encrypted] : segmentUpper(encrypted[0], encrypted.subarray(1), seq & 0x1fff);
+  }
+  /** Message d'application (clé d'app) → PDUs proxy ; compte un numéro de séquence par PDU retourné. */
+  function packApp(access, netKey, appKey, iv, seq, src, dst, ttl = 10) {
+    return packLower(lowerPdus(encryptApp(access, appKey, iv, seq, src, dst), seq, access.length), netKey, iv, seq, src, dst, ttl);
+  }
+  /** Message de configuration (clé d'appareil) → PDUs proxy. */
+  function packDev(access, netKey, devKey, iv, seq, src, dst, ttl = 10) {
+    return packLower(lowerPdus(encryptDev(access, devKey, iv, seq, src, dst), seq, access.length), netKey, iv, seq, src, dst, ttl);
+  }
+  /** Configuration du proxy (filtre d'adresses), style Telink. micLen : 8 (Godox, conforme) ou 4 (Amaran). */
+  function packProxyConfig(opcode, params, netKey, iv, seq, src, micLen = 8) {
+    const { nid, encKey, privKey } = k2(netKey);
+    const n = concat(Uint8Array.of(3, 0), be(seq, 3), be(src, 2), Uint8Array.of(0, 0), be(iv, 4));
+    const enc = ccmEncrypt(encKey, n, concat(be(0, 2), Uint8Array.of(opcode), params), micLen);
+    const pdu = concat(Uint8Array.of(((iv & 1) << 7) | nid, 0x80), be(seq, 3), be(src, 2), enc);
+    return concat(Uint8Array.of(2), obfuscate(pdu, privKey, iv));
+  }
+
+  /* ---------- Trames Godox (vendor opcode 0x0211F0, V2) ---------- */
+  const GODOX_CRC = [
+    0, 94, 188, 226, 97, 63, 221, 131, 194, 156, 126, 32, 163, 253, 31, 65, 157, 195, 33, 127, 252, 162, 64, 30, 95, 1, 227, 189, 62, 96, 130, 220,
+    35, 125, 159, 193, 66, 28, 254, 160, 225, 191, 93, 3, 128, 222, 60, 98, 190, 224, 2, 92, 223, 129, 99, 61, 124, 34, 192, 158, 29, 67, 161, 255,
+    70, 24, 250, 164, 39, 121, 155, 197, 132, 218, 56, 102, 229, 187, 89, 7, 219, 133, 103, 57, 186, 228, 6, 88, 25, 71, 165, 251, 120, 38, 196, 154,
+    101, 59, 217, 135, 4, 90, 184, 230, 167, 249, 27, 69, 198, 152, 122, 36, 248, 166, 68, 26, 153, 199, 37, 123, 58, 100, 134, 216, 91, 5, 231, 185,
+    140, 210, 48, 110, 237, 179, 81, 15, 78, 16, 242, 172, 47, 113, 147, 205, 17, 79, 173, 243, 112, 46, 204, 146, 211, 141, 111, 49, 178, 236, 14, 80,
+    175, 241, 19, 77, 206, 144, 114, 44, 109, 51, 209, 143, 12, 82, 176, 238, 50, 108, 142, 208, 83, 13, 239, 177, 240, 174, 76, 18, 145, 207, 45, 115,
+    202, 148, 118, 40, 171, 245, 23, 73, 8, 86, 180, 234, 105, 55, 213, 139, 87, 9, 235, 181, 54, 104, 138, 212, 149, 203, 41, 119, 244, 170, 72, 22,
+    233, 183, 85, 11, 136, 214, 52, 106, 43, 117, 151, 201, 74, 20, 246, 168, 116, 42, 200, 150, 21, 75, 169, 247, 182, 232, 10, 84, 215, 137, 107, 53,
+  ];
+  const godoxCrc = b => b.reduce((c, x) => GODOX_CRC[c ^ x], 0);
+  function godoxV2(model, endByte, data) {
+    const pad = new Uint8Array(5).fill(0xff); pad.set(data);
+    const body = concat(Uint8Array.of(model), pad, Uint8Array.of(endByte));
+    return concat(body, Uint8Array.of(godoxCrc(body)));
+  }
+  const splitBri = b => { const t = Math.round(Math.min(100, Math.max(0, b)) * 10); return [Math.floor(t / 10), t % 10]; };
+  const godox = {
+    opcode: Uint8Array.of(0xf0, 0x11, 0x02),
+    power: on => godoxV2(0xfe, 0xff, Uint8Array.of(on ? 0x00 : 0x01)), // polarité inversée : 0 = allumé
+    cct(bri, kelvin, gm = 0, supportsGm = false) {
+      const [p, t] = splitBri(bri);
+      return godoxV2(0xf0, t, Uint8Array.of(p, Math.round(kelvin / 100) & 0xff, (gm + 50) & 0xff, 0, supportsGm ? gm & 0xff : 0));
+    },
+    hsi(bri, hue, sat) {
+      const [p, t] = splitBri(bri);
+      return godoxV2(0xf1, t, Uint8Array.of(p, hue & 0xff, (hue >> 8) & 0xff, Math.round(sat), 0));
+    },
+  };
+
+  /* ---------- Trames Amaran / Aputure (opcode Telink 0x26, charge de 10 octets) ---------- */
+  const telinkFinal = p => { let s = 0; for (let i = 1; i < 10; i++) s += p[i]; p[0] = s & 0xff; return p; };
+  const clampI = (x, a, b) => Math.max(a, Math.min(b, Math.round(x)));
+  const amaran = {
+    opcode: Uint8Array.of(0x26),
+    onoff(on) { const p = new Uint8Array(10); p[8] = on ? 1 : 0; p[9] = 0x8c; return telinkFinal(p); },
+    brightness(i1000) { const v = clampI(i1000, 0, 1000), p = new Uint8Array(10); p[7] = (v & 3) << 6; p[8] = (v >> 2) & 0xff; p[9] = 0x8f; return telinkFinal(p); },
+    cct(kelvin, i1000, gm = 0) {
+      const v = clampI(i1000, 0, 1000);
+      let t = Math.trunc((kelvin + 5) / 10); t = Math.max(80, Math.min(2000, t));
+      const g = Math.max(0, Math.min(20, Math.round(gm) + 10));
+      let low = BigInt(v & 3) << 62n, high = 0x8200 | ((v >> 2) & 0xff);
+      if (t < 1001) { low |= BigInt(t) << 52n; high |= (t >> 12) & 0xff; }
+      else { low |= BigInt((t + 0x18) & 0x3ff) << 52n; low |= 0x0000040000000000n; }
+      low |= BigInt(g & 0x7f) << 45n;
+      const p = new Uint8Array(10);
+      for (let i = 0; i < 8; i++) p[i] = Number((low >> BigInt(i * 8)) & 0xffn);
+      p[8] = high & 0xff; p[9] = (high >> 8) & 0xff;
+      return telinkFinal(p);
+    },
+    hsi(hue, sat, i1000) {
+      const v = clampI(i1000, 0, 1000), h = clampI(hue, 0, 360) & 0x1ff, s = clampI(sat, 0, 100) & 0x7f, p = new Uint8Array(10);
+      p[5] = (s & 3) << 6; p[6] = ((h & 7) << 5) | ((s >> 2) & 0x1f); p[7] = ((h >> 3) & 0x3f) | ((v & 3) << 6); p[8] = (v >> 2) & 0xff; p[9] = 0x81;
+      return telinkFinal(p);
+    },
+  };
+
+  /* ---------- Enrôlement PB-GATT (provisioning) ---------- */
+  const PDU = { INVITE: 0, CAPS: 1, START: 2, PUBKEY: 3, CONFIRM: 5, RANDOM: 6, DATA: 7, COMPLETE: 8, FAILED: 9 };
+  const prov = (type, payload = new Uint8Array(0)) => concat(Uint8Array.of(0x03, type), payload);
+
+  /** Exécute l'échange d'enrôlement. io = { send(pdu), receive() → Promise<Uint8Array> (PDU sans l'octet proxy) }. */
+  async function provision(io, { netKey, ivIndex, unicast, onStep = () => {} }) {
+    const expect = async type => {
+      const raw = await io.receive();
+      if (raw[0] === PDU.FAILED) throw new Error('Enrôlement refusé par le projecteur (code ' + (raw[1] ?? '?') + ')');
+      if (raw[0] !== type) throw new Error('Réponse inattendue pendant l\'enrôlement');
+      return raw.slice(1);
+    };
+    const { priv, pub } = await C.p256Keypair();
+    const invite = Uint8Array.of(0);
+    onStep('Invitation…'); await io.send(prov(PDU.INVITE, invite));
+    const caps = await expect(PDU.CAPS);
+    if (caps.length !== 11) throw new Error('Capacités invalides');
+    const start = new Uint8Array(5);
+    onStep('Échange de clés…'); await io.send(prov(PDU.START, start)); await io.send(prov(PDU.PUBKEY, pub));
+    const devPub = await expect(PDU.PUBKEY);
+    if (devPub.length !== 64) throw new Error('Clé publique invalide');
+    const secret = await C.ecdh(priv, devPub);
+    const confSalt = s1(concat(invite, caps, start, pub, devPub));
+    const confKey = k1(secret, confSalt, ascii('prck'));
+    const rnd = C.randomBytes(16), auth = new Uint8Array(16);
+    await io.send(prov(PDU.CONFIRM, cmac(confKey, concat(rnd, auth))));
+    const devConf = await expect(PDU.CONFIRM);
+    await io.send(prov(PDU.RANDOM, rnd));
+    const devRnd = await expect(PDU.RANDOM);
+    const check = cmac(confKey, concat(devRnd, auth));
+    if (C.hex(check) !== C.hex(devConf)) throw new Error('Confirmation invalide : enrôlement interrompu');
+    const salt = s1(concat(confSalt, rnd, devRnd));
+    const sessionKey = k1(secret, salt, ascii('prsk')), sessionNonce = k1(secret, salt, ascii('prsn')).slice(3);
+    const deviceKey = k1(secret, salt, ascii('prdk'));
+    const data = concat(netKey, be(0, 2), Uint8Array.of(0), be(ivIndex, 4), be(unicast, 2));
+    onStep('Envoi des clés…'); await io.send(prov(PDU.DATA, ccmEncrypt(sessionKey, sessionNonce, data, 8)));
+    await expect(PDU.COMPLETE);
+    return { deviceKey, numElements: Math.max(1, caps[0]) };
+  }
+
+  /* ---------- Messages de configuration ---------- */
+  const configAppKeyAdd = (appKey, netIdx = 0, appIdx = 0) => {
+    const packed = (netIdx & 0xfff) | ((appIdx & 0xfff) << 12);
+    return concat(Uint8Array.of(0x00, packed & 0xff, (packed >> 8) & 0xff, (packed >> 16) & 0xff), appKey);
+  };
+  const le2 = n => Uint8Array.of(n & 0xff, (n >> 8) & 0xff);
+  const configModelAppBind = (element, appIdx = 0, company = 0x0211, model = 0x0000) =>
+    concat(Uint8Array.of(0x80, 0x3d), le2(element), le2(appIdx), le2(company), le2(model));
+
+  const api = {
+    packApp, packDev, packProxyConfig, provision, configAppKeyAdd, configModelAppBind,
+    godox, amaran, godoxCrc, segmentUpper, encryptApp, encryptDev,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Mesh = api;
+})(typeof self !== 'undefined' ? self : globalThis);
+
+'use strict';
+/* Pilotes Bluetooth (Web Bluetooth) : Nanlite (GATT), Godox et Amaran (Mesh via proxy GATT).
+   Les trames sont calculées dans mesh.js (testé) ; ici : connexion, file d'envoi, enrôlement guidé. */
+(function (root) {
+  const M = root.Mesh || require('./mesh.js');
+  const C = root.MeshCrypto || require('./mesh-crypto.js');
+  const { concat } = C;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+  /* ---------- Nanlite : série sur GATT (protocole décodé par la communauté) ---------- */
+  const NL = {
+    svc: '0003cdd0-0000-1000-8000-00805f9b0131',
+    tx: '0003cdd1-0000-1000-8000-00805f9b0131', // notifications
+    rx: '0003cdd2-0000-1000-8000-00805f9b0131', // écriture
+  };
+  const nlFrame = app => {
+    const size = 5 + app.length + 4;
+    const head = Uint8Array.of(0xfa, 0x55, size >> 8, size & 0xff, 0x01);
+    let sum = 1; for (const b of head) sum += b; for (const b of app) sum += b;
+    return concat(head, app, Uint8Array.of((sum >> 8) & 0xff, sum & 0xff, 0x0d, 0x0a));
+  };
+  const nanlite = {
+    /** Paramètre court : groupe 01, param, valeur uint16 (+ remplissage 00 04). */
+    short(seq, param, value) { return nlFrame(Uint8Array.of(seq, 0x20, 0x01, param, (value >> 8) & 0xff, value & 0xff, 0x00, 0x04)); },
+    brightness: (seq, pct) => nanlite.short(seq, 0x01, Math.round(clamp(pct, 0, 100))),
+    /** Changement de mode (paquet étendu, opcode 01). */
+    mode(seq, bri, mode, sub, params) {
+      const b = Math.round(clamp(bri, 0, 100));
+      const pay = concat(Uint8Array.of(0, (b >> 8) & 0xff, b & 0xff, mode, sub), params);
+      pay[0] = pay.length;
+      return nlFrame(concat(Uint8Array.of(seq, 0x24, 0x00, 0x04, 0x01, 0x01, 0x01), pay));
+    },
+    cct(seq, bri, kelvin, gm = 0) {
+      const k = Math.round(clamp(kelvin, 2700, 7500)), g = Math.round(clamp(gm, -100, 100)) & 0xffff;
+      return nanlite.mode(seq, bri, 0x02, 0x02, Uint8Array.of(0x01, k >> 8, k & 0xff, g >> 8, g & 0xff, 0x01));
+    },
+    hsi(seq, bri, hue, sat) {
+      const h = Math.round(clamp(hue, 0, 359)), s = Math.round(clamp(sat, 0, 100));
+      return nanlite.mode(seq, bri, 0x03, 0x01, Uint8Array.of(h >> 8, h & 0xff, s));
+    },
+  };
+
+  /* ---------- Utilitaires Web Bluetooth ---------- */
+  const hasBle = () => typeof navigator !== 'undefined' && !!navigator.bluetooth;
+  async function writeFast(ch, bytes) { // sans réponse si possible
+    if (ch.writeValueWithoutResponse) return ch.writeValueWithoutResponse(bytes);
+    return ch.writeValue(bytes);
+  }
+
+  /* ---------- Liaison Nanlite ---------- */
+  class NanliteLink {
+    constructor(fixture) { this.f = fixture; this.seq = 0; this.last = null; this.dev = null; this.rx = null; this.busy = false; this.pending = null; }
+    get connected() { return !!(this.dev && this.dev.gatt && this.dev.gatt.connected); }
+    async connect() {
+      this.dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [NL.svc] }], optionalServices: [NL.svc] });
+      this.dev.addEventListener('gattserverdisconnected', () => { this.rx = null; this.onChange && this.onChange(); });
+      const server = await this.dev.gatt.connect();
+      const svc = await server.getPrimaryService(NL.svc);
+      this.rx = await svc.getCharacteristic(NL.rx);
+      try { const tx = await svc.getCharacteristic(NL.tx); await tx.startNotifications(); } catch { /* optionnel */ }
+      this.last = null;
+      this.onChange && this.onChange();
+    }
+    disconnect() { try { this.dev && this.dev.gatt.disconnect(); } catch { /* déjà fermé */ } }
+    nextSeq() { this.seq = (this.seq + 1) & 0xff; return this.seq; }
+    async write(frame) { // fragments de 20 octets ; le dernier avec réponse
+      for (let i = 0; i < frame.length; i += 20) {
+        const part = frame.slice(i, i + 20), lastPart = i + 20 >= frame.length;
+        if (lastPart && this.rx.writeValueWithResponse) await this.rx.writeValueWithResponse(part);
+        else await writeFast(this.rx, part);
+      }
+    }
+    push(s) { this.pending = s; if (!this.busy) this.pump(); }
+    async pump() {
+      this.busy = true;
+      try {
+        while (this.pending && this.rx) {
+          const s = this.pending; this.pending = null;
+          const l = this.last, bri = s.dim;
+          const sameColor = l && l.mode === s.mode && (s.mode === 'cct' ? l.cct === s.cct : l.hue === s.hue && l.sat === s.sat);
+          if (sameColor) { if (l.dim !== bri) await this.write(nanlite.brightness(this.nextSeq(), bri)); }
+          else if (s.mode === 'hsi') await this.write(nanlite.hsi(this.nextSeq(), bri, s.hue, s.sat));
+          else await this.write(nanlite.cct(this.nextSeq(), bri, s.cct, 0));
+          this.last = { ...s };
+          await sleep(60);
+        }
+      } catch (e) { this.error = e; } finally { this.busy = false; }
+    }
+  }
+
+  /* ---------- Liaison Mesh (une connexion proxy dessert tout le réseau) ---------- */
+  const PROXY = 0x1828, PROXY_IN = 0x2add, PROXY_OUT = 0x2ade, PROV = 0x1827, PROV_IN = 0x2adb, PROV_OUT = 0x2adc;
+
+  class MeshLink {
+    /** net : { id, brand, netKey(hex), appKey(hex), ivIndex, seq, src, nodes:[{addr}] } ; onSeq(seq) pour persister. */
+    constructor(net, onSeq) {
+      this.net = net; this.onSeq = onSeq || (() => {});
+      this.netKey = C.unhex(net.netKey); this.appKey = C.unhex(net.appKey);
+      this.dev = null; this.inCh = null; this.pending = new Map(); this.busy = false; this.last = new Map(); this.rxq = [];
+    }
+    get connected() { return !!(this.dev && this.dev.gatt && this.dev.gatt.connected && this.inCh); }
+    nextSeq(n = 1) { const s = this.net.seq; this.net.seq = (s + n) & 0xffffff; this.onSeq(this.net.seq); return s; }
+    async openProxy() {
+      this.dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [PROXY] }], optionalServices: [PROXY] });
+      this.dev.addEventListener('gattserverdisconnected', () => { this.inCh = null; this.onChange && this.onChange(); });
+      const server = await this.dev.gatt.connect();
+      const svc = await server.getPrimaryService(PROXY);
+      this.inCh = await svc.getCharacteristic(PROXY_IN);
+      const out = await svc.getCharacteristic(PROXY_OUT);
+      out.addEventListener('characteristicvaluechanged', e => this.onNotify(new Uint8Array(e.target.value.buffer)));
+      await out.startNotifications();
+    }
+    onNotify(d) {
+      const type = d[0] & 0x3f;
+      if (type === 1 && d.length >= 23 && d[1] === 0x01) { // balise réseau sécurisée : index IV
+        const iv = ((d[11] << 24) | (d[12] << 16) | (d[13] << 8) | d[14]) >>> 0;
+        this.net.ivIndex = iv; this.ivSeen = true;
+      }
+    }
+    async connect(onStep = () => {}) {
+      onStep('Connexion au projecteur…');
+      await this.openProxy();
+      await sleep(700); // laisse arriver la balise (index IV)
+      // Filtre du proxy : liste blanche puis adresses (séquence attendue par le SDK Telink)
+      const mic = this.net.brand === 'amaran' ? 4 : 8;
+      await writeFast(this.inCh, M.packProxyConfig(0x00, Uint8Array.of(0x00), this.netKey, this.net.ivIndex, this.nextSeq(), this.net.src, mic));
+      await sleep(500);
+      const addrs = [this.net.src, 0xffff, 0xc000, ...(this.net.nodes || []).map(n => n.addr)];
+      const ab = new Uint8Array(addrs.length * 2); addrs.forEach((a, i) => { ab[2 * i] = a >> 8; ab[2 * i + 1] = a & 0xff; });
+      await writeFast(this.inCh, M.packProxyConfig(0x01, ab, this.netKey, this.net.ivIndex, this.nextSeq(), this.net.src, mic));
+      await sleep(300);
+      this.onChange && this.onChange();
+    }
+    disconnect() { try { this.dev && this.dev.gatt.disconnect(); } catch { /* déjà fermé */ } }
+    async sendAccess(dst, access, repeats = 1) {
+      for (let r = 0; r < repeats; r++) {
+        const seq = this.nextSeq();
+        const pdus = M.packApp(access, this.netKey, this.appKey, this.net.ivIndex, seq, this.net.src, dst, 10);
+        if (pdus.length > 1) this.nextSeq(pdus.length - 1);
+        for (const p of pdus) await writeFast(this.inCh, p);
+        if (r + 1 < repeats) await sleep(60);
+      }
+    }
+    /** État souhaité pour un nœud (adresse unicast) ; dernier état gagnant, un seul envoi à la fois. */
+    push(addr, s) { this.pending.set(addr, s); if (!this.busy) this.pump(); }
+    async pump() {
+      this.busy = true;
+      try {
+        while (this.pending.size && this.inCh) {
+          const [addr, s] = this.pending.entries().next().value; this.pending.delete(addr);
+          const l = this.last.get(addr);
+          if (!l || l.dim !== s.dim || l.mode !== s.mode || l.cct !== s.cct || l.hue !== s.hue || l.sat !== s.sat) {
+            await this.sendState(addr, s);
+            this.last.set(addr, { ...s });
+            await sleep(50);
+          }
+        }
+      } catch (e) { this.error = e; } finally { this.busy = false; }
+    }
+    async sendState(addr, s) {
+      if (this.net.brand === 'godox') {
+        if (s.dim <= 0) return this.sendAccess(addr, concat(M.godox.opcode, M.godox.power(false)));
+        const on = this.last.get(addr);
+        if (!on || on.dim <= 0) await this.sendAccess(addr, concat(M.godox.opcode, M.godox.power(true)));
+        const frame = s.mode === 'hsi' ? M.godox.hsi(s.dim, s.hue, s.sat) : M.godox.cct(s.dim, s.cct, 0, false);
+        return this.sendAccess(addr, concat(M.godox.opcode, frame));
+      }
+      const i = Math.round(s.dim * 10); // amaran : 0-1000
+      const p = s.mode === 'hsi' ? M.amaran.hsi(s.hue, s.sat, i) : M.amaran.cct(s.cct, i, 0);
+      return this.sendAccess(addr, concat(M.amaran.opcode, p), 2); // 2 envois : la diffusion mesh n'est pas acquittée
+    }
+
+    /* ----- Enrôlement guidé (2 étapes : chaque étape demande un geste de l'utilisateur) ----- */
+    /** Étape 1 : se connecte à un projecteur en mode appairage et l'enrôle dans le réseau. */
+    async provisionNode(addr, onStep = () => {}) {
+      onStep('Recherche du projecteur en mode appairage…');
+      const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [PROV] }], optionalServices: [PROV] });
+      onStep('Connexion…');
+      const server = await dev.gatt.connect();
+      const svc = await server.getPrimaryService(PROV);
+      const inCh = await svc.getCharacteristic(PROV_IN), outCh = await svc.getCharacteristic(PROV_OUT);
+      const queue = [], waiters = []; let partial = null;
+      outCh.addEventListener('characteristicvaluechanged', e => {
+        const d = new Uint8Array(e.target.value.buffer.slice(e.target.value.byteOffset, e.target.value.byteOffset + e.target.value.byteLength));
+        const sar = d[0] >> 6; let pdu = null;
+        if (sar === 0) pdu = d.slice(1);
+        else if (sar === 1) partial = d.slice(1);
+        else if (partial) { partial = concat(partial, d.slice(1)); if (sar === 3) { pdu = partial; partial = null; } }
+        if (pdu) { const w = waiters.shift(); if (w) w(pdu); else queue.push(pdu); }
+      });
+      await outCh.startNotifications();
+      const io = {
+        send: async pdu => { try { await writeFast(inCh, pdu); } catch { for (let i = 0; i < pdu.length - 1; i += 19) { // repli : segmentation proxy (SAR)
+          const part = pdu.slice(1 + i, 1 + i + 19), first = i === 0, last = i + 19 >= pdu.length - 1;
+          await writeFast(inCh, concat(Uint8Array.of(((first ? (last ? 0 : 1) : (last ? 3 : 2)) << 6) | 3), part)); } } await sleep(60); },
+        receive: () => new Promise((res, rej) => { if (queue.length) return res(queue.shift()); const t = setTimeout(() => rej(new Error('Le projecteur ne répond plus (délai dépassé)')), 15000); waiters.push(p => { clearTimeout(t); res(p); }); }),
+      };
+      try {
+        const r = await M.provision(io, { netKey: this.netKey, ivIndex: this.net.ivIndex, unicast: addr, onStep });
+        return r;
+      } finally { try { server.disconnect(); } catch { /* ok */ } }
+    }
+    /** Étape 2 : connexion proxy, puis liaison de la clé d'application au modèle du projecteur. */
+    async configureNode(addr, deviceKey, onStep = () => {}) {
+      await this.connect(onStep);
+      onStep('Configuration du projecteur…');
+      const send = async access => {
+        const seq = this.nextSeq();
+        const pdus = M.packDev(access, this.netKey, deviceKey, this.net.ivIndex, seq, this.net.src, addr, 10);
+        if (pdus.length > 1) this.nextSeq(pdus.length - 1);
+        for (const p of pdus) { await writeFast(this.inCh, p); await sleep(40); }
+      };
+      await send(M.configAppKeyAdd(this.appKey));
+      await sleep(1500);
+      await send(M.configModelAppBind(addr, 0, 0x0211, 0x0000));
+      await sleep(1500);
+    }
+  }
+
+  const api = { nanlite, NanliteLink, MeshLink, hasBle, nlFrame };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Drivers = api;
+})(typeof self !== 'undefined' ? self : globalThis);
+
+'use strict';
+/* Lumi — contrôle de projecteurs LED multi-marques (DMX / Art-Net via passerelle) */
+
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const to8 = x => Math.round(clamp(x) * 255);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+/* ---------- Profils (modifiables dans l'app) ----------
+   Les profils "Astera" sont des points de départ : vérifie l'ordre des canaux
+   dans le manuel DMX de ton modèle et de son mode, puis ajuste le JSON. */
+const DEFAULT_PROFILES = {
+  'dimmer-1':     { label: 'Dimmer 1 canal', channels: [{ t: 'dim' }] },
+  'bicolor-dimcct': { label: 'Bicolore — dim + CCT (2 can.)', cctMin: 2700, cctMax: 6500, channels: [{ t: 'dim' }, { t: 'cct' }] },
+  'bicolor-warmcool': { label: 'Bicolore — chaud + froid (2 can.)', cctMin: 2700, cctMax: 6500, channels: [{ t: 'warm' }, { t: 'cool' }] },
+  'rgb-3':        { label: 'RGB (3 can.)', channels: [{ t: 'r' }, { t: 'g' }, { t: 'b' }] },
+  'dim-rgb-4':    { label: 'Dim + RGB (4 can.)', channels: [{ t: 'dim' }, { t: 'r' }, { t: 'g' }, { t: 'b' }] },
+  'rgbw-4':       { label: 'RGBW (4 can.)', channels: [{ t: 'r' }, { t: 'g' }, { t: 'b' }, { t: 'w' }] },
+  'rgbww-5':      { label: 'RGB + chaud + froid (5 can.)', cctMin: 2700, cctMax: 6500, channels: [{ t: 'r' }, { t: 'g' }, { t: 'b' }, { t: 'warm' }, { t: 'cool' }] },
+  'astera-rgbw':  { label: 'Astera — RGBW (4 can., à vérifier)', channels: [{ t: 'r' }, { t: 'g' }, { t: 'b' }, { t: 'w' }] },
+  'astera-dim-rgbw': { label: 'Astera — Dim + RGBW (5 can., à vérifier)', channels: [{ t: 'dim' }, { t: 'r' }, { t: 'g' }, { t: 'b' }, { t: 'w' }] },
+};
+
+const newState = () => ({ dim: 0, cct: 5600, mode: 'cct', hue: 0, sat: 100, fx: 'none', fxSpeed: 5 });
+
+/* ---------- Persistance ---------- */
+const LS = 'lumi.v1';
+function load() {
+  try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; }
+}
+const saved = load();
+const db = {
+  fixtures: saved?.fixtures || [],
+  scenes: saved?.scenes || [],
+  networks: saved?.networks || [],
+  profiles: { ...DEFAULT_PROFILES, ...(saved?.profiles || {}) },
+  settings: Object.assign({ transport: 'sim', url: `ws://${location.hostname || 'localhost'}:8080`, fade: 1 }, saved?.settings || {}),
+};
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const out = { ...db, fixtures: db.fixtures.map(({ anim, _sig, ...f }) => f) };
+    try { localStorage.setItem(LS, JSON.stringify(out)); } catch { /* stockage plein ou bloqué */ }
+  }, 300);
+}
+
+/* ---------- Couleur ---------- */
+function kelvinToRGB(k) {
+  const t = clamp(k, 1000, 40000) / 100, c = v => Math.round(clamp(v, 0, 255));
+  const r = t <= 66 ? 255 : c(329.698727446 * Math.pow(t - 60, -0.1332047592));
+  const g = t <= 66 ? c(99.4708025861 * Math.log(t) - 161.1195681661) : c(288.1221695283 * Math.pow(t - 60, -0.0755148492));
+  const b = t >= 66 ? 255 : t <= 19 ? 0 : c(138.5177312231 * Math.log(t - 10) - 305.0447927307);
+  return [r, g, b];
+}
+function hsv2rgb(h, s, v) {
+  h = ((h % 360) + 360) % 360 / 60;
+  const i = Math.floor(h), f = h - i, p = v * (1 - s), q = v * (1 - s * f), t = v * (1 - s * (1 - f));
+  const m = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][i % 6];
+  return m.map(x => Math.round(x * 255));
+}
+
+/* ---------- Effets ---------- */
+const flick = new Map();
+function fxMult(f, t) {
+  const s = f.state, sp = s.fxSpeed;
+  switch (s.fx) {
+    case 'strobe': return ((t * sp) % 1) < 0.5 ? 1 : 0;
+    case 'pulse': return 0.5 + 0.5 * Math.sin(2 * Math.PI * t * sp * 0.2);
+    case 'flicker': {
+      const v = (flick.get(f.id) ?? 0.5);
+      const nv = v + (Math.random() - v) * Math.min(0.9, 0.04 * sp);
+      flick.set(f.id, nv);
+      return 0.55 + 0.45 * nv;
+    }
+    default: return 1;
+  }
+}
+
+/* ---------- Rendu DMX d'un projecteur ---------- */
+function renderFixture(f, t) {
+  const p = db.profiles[f.profile];
+  if (!p) return [];
+  const s = f.state, ch = p.channels;
+  const dim = clamp(s.dim / 100) * fxMult(f, t);
+  const hasDim = ch.some(c => c.t === 'dim');
+  const hasWhite = ch.some(c => ['warm', 'cool', 'w', 'cct'].includes(c.t));
+  const lo = p.cctMin || 2700, hi = p.cctMax || 6500;
+  const tt = clamp((s.cct - lo) / (hi - lo));
+  const cctMode = s.mode === 'cct';
+  // Couleur d'émission RGB
+  let col;
+  if (cctMode) col = hasWhite ? [0, 0, 0] : kelvinToRGB(s.cct);
+  else col = hsv2rgb(s.hue, s.sat / 100, 1);
+  const k = hasDim ? 1 : dim;
+  return ch.map(c => {
+    switch (c.t) {
+      case 'dim': return to8(dim);
+      case 'cct': return to8(tt);
+      case 'warm': return cctMode ? to8(dim * (1 - tt)) : 0;
+      case 'cool': return cctMode ? to8(dim * tt) : 0;
+      case 'w': return cctMode ? to8(dim) : 0;
+      case 'r': return to8(col[0] / 255 * k);
+      case 'g': return to8(col[1] / 255 * k);
+      case 'b': return to8(col[2] / 255 * k);
+      case 'fixed': return clamp(c.v || 0, 0, 255);
+      default: return 0;
+    }
+  });
+}
+
+/* ---------- Transport ---------- */
+const transport = {
+  ws: null, retry: null,
+  connect() {
+    clearTimeout(this.retry);
+    if (this.ws) { this.ws.onclose = null; this.ws.close(); this.ws = null; }
+    if (db.settings.transport !== 'bridge') return this.setStatus('sim', 'Essai');
+    try { this.ws = new WebSocket(db.settings.url); } catch { return this.setStatus('err', 'URL invalide'); }
+    this.setStatus('wait', 'Connexion…');
+    this.ws.onopen = () => this.setStatus('ok', 'Passerelle connectée');
+    this.ws.onclose = () => { this.setStatus('err', 'Pas de connexion'); this.retry = setTimeout(() => this.connect(), 2000); };
+    this.ws.onerror = () => {};
+  },
+  send(u, buf) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ u, d: Array.from(buf) })); },
+  setStatus(c, t) { const el = $('#status'); el.className = 'status ' + c; el.textContent = t; },
+};
+
+/* ---------- Boucle de sortie (30 Hz) ---------- */
+let blackout = false;
+const lastSent = new Map();
+let lastKeepAlive = 0;
+const monitor = new Map(); // fixture.id -> canaux
+
+function stepAnim(f, now) {
+  const a = f.anim;
+  if (!a) return false;
+  const k = clamp((now - a.start) / a.dur);
+  for (const key of ['dim', 'cct', 'hue', 'sat']) f.state[key] = a.from[key] + (a.to[key] - a.from[key]) * k;
+  if (k >= 1) { f.state = { ...a.to }; f.anim = null; }
+  return true;
+}
+
+function frame() {
+  const now = performance.now(), t = now / 1000;
+  let animating = false;
+  const unis = new Map();
+  for (const f of db.fixtures) {
+    if (stepAnim(f, now)) animating = true;
+    if (isBle(f)) { // Bluetooth : envoi par changement d'état (la liaison limite le débit)
+      const s = f.state, eff = { dim: blackout ? 0 : s.dim, mode: s.mode, cct: s.cct, hue: s.hue, sat: s.sat };
+      const sig = JSON.stringify(eff), l = links.get(linkKey(f));
+      if (l && l.connected && f._sig !== sig) { f._sig = sig; if (f.link.kind === 'nanlite') l.push(eff); else l.push(f.link.addr, eff); }
+      continue;
+    }
+    const vals = renderFixture(f, t);
+    monitor.set(f.id, vals);
+    let buf = unis.get(f.universe);
+    if (!buf) unis.set(f.universe, buf = new Uint8Array(512));
+    vals.forEach((v, i) => { const a = f.address - 1 + i; if (a >= 0 && a < 512) buf[a] = blackout ? 0 : v; });
+  }
+  const keep = now - lastKeepAlive > 1000;
+  for (const [u, buf] of unis) {
+    const key = buf.join(',');
+    if (keep || lastSent.get(u) !== key) { transport.send(u, buf); lastSent.set(u, key); }
+  }
+  if (keep) lastKeepAlive = now;
+  if (animating) syncUI(true);
+}
+setInterval(frame, 1000 / 30);
+
+/* ---------- Sélection ---------- */
+const sel = new Set();
+const selected = () => db.fixtures.filter(f => sel.has(f.id));
+
+/* ---------- UI : projecteurs ---------- */
+function renderFixtures() {
+  const box = $('#fixtures');
+  box.innerHTML = db.fixtures.map(f => {
+    const p = db.profiles[f.profile];
+    return `<div class="card" data-id="${f.id}">
+      <input type="checkbox" class="chk" aria-label="Sélectionner">
+      <div class="meta"><b><span class="sw"></span>${esc(f.name)}</b>
+        <small>${f.group ? esc(f.group) : '&nbsp;'}</small><small class="adv">${f.link ? 'Bluetooth · ' + esc(BRAND_LABEL[f.link.brand] || '') + (f.link.addr ? ' #' + f.link.addr : '') : esc(p ? p.label : 'Type manquant') + ' · U' + f.universe + ' @' + String(f.address).padStart(3, '0')}</small>
+        ${f.link ? '<button class="btn ghost small conn">🔵 Connecter</button>' : ''}</div>
+      <button class="btn ghost small edit" aria-label="Modifier">✏️</button>
+      <div class="line"><input type="range" class="cdim" min="0" max="100" step="0.5" aria-label="Intensité"><span class="pct"></span></div>
+      <div class="mon"></div></div>`;
+  }).join('');
+  $('#empty').hidden = db.fixtures.length > 0;
+  renderGroups();
+  syncUI();
+}
+
+function renderGroups() {
+  const groups = [...new Set(db.fixtures.map(f => f.group).filter(Boolean))];
+  $('#groups').innerHTML = groups.map(g => `<span class="chip" data-g="${esc(g)}">${esc(g)}</span>`).join('');
+}
+
+function swatch(f) {
+  const s = f.state, d = clamp(s.dim / 100);
+  const c = s.mode === 'hsi' ? hsv2rgb(s.hue, s.sat / 100, 1) : kelvinToRGB(s.cct);
+  const m = 0.15 + 0.85 * d;
+  return `rgb(${Math.round(c[0] * m)},${Math.round(c[1] * m)},${Math.round(c[2] * m)})`;
+}
+
+let lastMon = 0;
+function syncUI(light) {
+  for (const f of db.fixtures) {
+    const el = $(`.card[data-id="${f.id}"]`);
+    if (!el) continue;
+    el.classList.toggle('sel', sel.has(f.id));
+    $('.chk', el).checked = sel.has(f.id);
+    const r = $('.cdim', el);
+    if (document.activeElement !== r) r.value = f.state.dim;
+    $('.pct', el).textContent = Math.round(f.state.dim) + '%';
+    $('.sw', el).style.background = swatch(f);
+    const cb = $('.conn', el);
+    if (cb) { const on = bleConnected(f); cb.textContent = on ? '✓ Connecté' : '🔵 Connecter'; cb.classList.toggle('ok', on); }
+  }
+  syncPanel();
+  const now = performance.now();
+  if (now - lastMon > 100) {
+    lastMon = now;
+    for (const f of db.fixtures) {
+      const el = $(`.card[data-id="${f.id}"] .mon`);
+      if (el) el.textContent = 'DMX ' + (monitor.get(f.id) || []).join(' ');
+    }
+  }
+}
+setInterval(() => syncUI(true), 100);
+
+/* ---------- UI : panneau de sélection ---------- */
+const P = { dim: $('#dim'), cct: $('#cct'), hue: $('#hue'), sat: $('#sat'), spd: $('#fxSpeed') };
+const SWATCHES = [
+  { n: '2000K', c: '#ff9a3c', s: { mode: 'cct', cct: 2000 } },
+  { n: '3200K', c: '#ffc58a', s: { mode: 'cct', cct: 3200 } },
+  { n: '4300K', c: '#ffe3c4', s: { mode: 'cct', cct: 4300 } },
+  { n: '5600K', c: '#fff4e5', s: { mode: 'cct', cct: 5600 } },
+  { n: '6500K', c: '#cfe3ff', s: { mode: 'cct', cct: 6500 } },
+  { n: 'Rouge', c: '#ff2d2d', s: { mode: 'hsi', hue: 0, sat: 100 } },
+  { n: 'Orange', c: '#ff8a00', s: { mode: 'hsi', hue: 30, sat: 100 } },
+  { n: 'Jaune', c: '#ffe600', s: { mode: 'hsi', hue: 55, sat: 100 } },
+  { n: 'Vert', c: '#22d36b', s: { mode: 'hsi', hue: 140, sat: 100 } },
+  { n: 'Cyan', c: '#18d8e8', s: { mode: 'hsi', hue: 185, sat: 100 } },
+  { n: 'Bleu', c: '#2f6bff', s: { mode: 'hsi', hue: 225, sat: 100 } },
+  { n: 'Violet', c: '#9b4dff', s: { mode: 'hsi', hue: 270, sat: 100 } },
+  { n: 'Magenta', c: '#ff4fa3', s: { mode: 'hsi', hue: 325, sat: 100 } },
+];
+$('#swatches').innerHTML = SWATCHES.map((w, i) =>
+  `<button class="sw-btn" data-i="${i}" style="--c:${w.c}" aria-label="${w.n}"><span>${w.n}</span></button>`).join('');
+const isSwatch = (s, w) => s.mode === w.s.mode && (w.s.mode === 'cct' ? Math.abs(s.cct - w.s.cct) < 50 : Math.abs(s.hue - w.s.hue) < 2 && s.sat > 95);
+
+function syncPanel() {
+  const list = selected(), first = list[0];
+  $('#fxNote').hidden = !list.some(isBle);
+  $('#panel').classList.toggle('disabled', !first);
+  $('#selHint').hidden = !!first;
+  $('#selCount').textContent = list.length ? `· ${list.length} lampe${list.length > 1 ? 's' : ''}` : '';
+  if (!first) return;
+  const s = first.state;
+  const set = (el, v) => { if (document.activeElement !== el) el.value = v; };
+  set(P.dim, s.dim); set(P.cct, s.cct); set(P.hue, s.hue); set(P.sat, s.sat); set(P.spd, s.fxSpeed);
+  $('#oDim').textContent = Math.round(s.dim) + '%';
+  $('#oCct').textContent = Math.round(s.cct) + 'K';
+  $('#oHue').textContent = Math.round(s.hue) + '°';
+  $('#oSat').textContent = Math.round(s.sat) + '%';
+  $('#oSpd').textContent = s.fxSpeed;
+  document.querySelectorAll('#swatches .sw-btn').forEach(b => b.classList.toggle('on', isSwatch(s, SWATCHES[+b.dataset.i])));
+  document.querySelectorAll('#fxBtns button').forEach(b => b.classList.toggle('on', b.dataset.fx === s.fx));
+  $('#spdRow').hidden = s.fx === 'none';
+}
+
+function apply(patch) {
+  for (const f of selected()) { Object.assign(f.state, patch); f.anim = null; }
+  save(); syncUI();
+}
+P.dim.oninput = () => apply({ dim: +P.dim.value });
+P.cct.oninput = () => apply({ cct: +P.cct.value, mode: 'cct' });
+P.hue.oninput = () => apply({ hue: +P.hue.value, mode: 'hsi' });
+P.sat.oninput = () => apply({ sat: +P.sat.value, mode: 'hsi' });
+P.spd.oninput = () => apply({ fxSpeed: +P.spd.value });
+$('.stops').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const n = +b.dataset.stop;
+  for (const f of selected()) {
+    const d = f.state.dim;
+    f.state.dim = clamp(n > 0 && d < 1 ? 1 : d * Math.pow(2, n), 0, 100);
+    f.anim = null;
+  }
+  save(); syncUI();
+};
+$('#swatches').onclick = e => { const b = e.target.closest('.sw-btn'); if (b) apply(SWATCHES[+b.dataset.i].s); };
+$('#fxBtns').onclick = e => { const b = e.target.closest('button'); if (b) apply({ fx: b.dataset.fx }); };
+
+/* ---------- Événements liste ---------- */
+$('#fixtures').addEventListener('input', e => {
+  if (!e.target.classList.contains('cdim')) return;
+  const f = db.fixtures.find(x => x.id === e.target.closest('.card').dataset.id);
+  f.state.dim = +e.target.value; f.anim = null; save(); syncUI();
+});
+$('#fixtures').addEventListener('click', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  const f = db.fixtures.find(x => x.id === card.dataset.id);
+  if (e.target.closest('.edit')) return openFixture(f);
+  if (e.target.closest('.conn')) return connectFixture(f);
+  if (e.target.classList.contains('chk')) {
+    e.target.checked ? sel.add(f.id) : sel.delete(f.id);
+    return syncUI();
+  }
+  if (!e.target.closest('input,button')) { sel.has(f.id) ? sel.delete(f.id) : sel.add(f.id); syncUI(); }
+});
+$('#groups').onclick = e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  const ids = db.fixtures.filter(f => f.group === c.dataset.g).map(f => f.id);
+  const all = ids.every(id => sel.has(id));
+  ids.forEach(id => all ? sel.delete(id) : sel.add(id));
+  syncUI();
+};
+$('#selAll').onclick = () => { db.fixtures.forEach(f => sel.add(f.id)); syncUI(); };
+$('#selNone').onclick = () => { sel.clear(); syncUI(); };
+$('#blackout').onclick = e => { blackout = !blackout; e.currentTarget.classList.toggle('on', blackout); e.currentTarget.textContent = blackout ? 'Blackout ON' : 'Blackout'; };
+
+/* ---------- Bluetooth : liaisons ---------- */
+const links = new Map();
+const isBle = f => !!f.link;
+const netOf = id => db.networks.find(n => n.id === id);
+const linkKey = f => f.link.kind === 'nanlite' ? 'nl:' + f.id : 'net:' + f.link.net;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function toast(msg, ms = 4000) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, ms);
+}
+const bleErr = e => (e && e.name === 'NotFoundError') ? 'Aucun projecteur choisi.' : (e && e.message) || String(e);
+function linkFor(key, make) {
+  let l = links.get(key);
+  if (!l) {
+    l = make();
+    l.onChange = () => {
+      if (l.last instanceof Map) l.last.clear(); else l.last = null;
+      db.fixtures.forEach(x => { if (isBle(x) && linkKey(x) === key) x._sig = null; });
+      syncUI();
+    };
+    links.set(key, l);
+  }
+  return l;
+}
+const netLink = net => linkFor('net:' + net.id, () => new Drivers.MeshLink(net, () => save()));
+const getLink = f => f.link.kind === 'nanlite'
+  ? linkFor(linkKey(f), () => new Drivers.NanliteLink(f))
+  : netLink(netOf(f.link.net));
+const bleConnected = f => { const l = links.get(linkKey(f)); return !!(l && l.connected); };
+async function connectFixture(f) {
+  if (!Drivers.hasBle()) return toast('Bluetooth indisponible ici : ouvre la page dans Bluefy.', 6000);
+  try { toast('Connexion Bluetooth…', 20000); await getLink(f).connect(); toast('Connecté ✓'); }
+  catch (e) { toast(bleErr(e), 7000); }
+}
+
+/* ---------- Dialogue projecteur ---------- */
+const dF = $('#dFixture');
+let editing = null;
+const BRAND_LABEL = { nanlite: 'Nanlite', godox: 'Godox', amaran: 'Amaran' };
+const BLE_HINTS = {
+  nanlite: 'Allume le projecteur et active son Bluetooth. Touche OK, puis choisis-le dans la liste.',
+  godox: "Mets le projecteur en mode appairage (bouton Bluetooth maintenu jusqu'au clignotement). Il rejoint un réseau géré par cette app et ne sera plus visible dans l'app Godox tant que tu ne le réinitialises pas.",
+  amaran: "Remets le projecteur à zéro (mode appairage). Il rejoint un réseau géré par cette app. Fonction expérimentale : sinon, utilise « J'ai déjà un réseau » avec les clés de ton réseau existant.",
+};
+function fillProfiles() {
+  $('#fProfile').innerHTML = Object.entries(db.profiles).map(([k, p]) => `<option value="${esc(k)}">${esc(p.label || k)}</option>`).join('');
+}
+function syncDialog() {
+  const ble = $('#fConn').value === 'ble';
+  $('#fNewOnly').hidden = !!editing;
+  $('#fBrandWrap').hidden = !ble; $('#fBleHint').hidden = !ble; $('#fProfileWrap').hidden = ble;
+  $('#fBleHint').textContent = BLE_HINTS[$('#fBrand').value];
+  $('#fDmxAdv').hidden = editing ? isBle(editing) : ble;
+}
+$('#fConn').onchange = $('#fBrand').onchange = syncDialog;
+function openFixture(f) {
+  editing = f || null;
+  fillProfiles();
+  $('#dfTitle').textContent = f ? 'Modifier le projecteur' : 'Nouveau projecteur';
+  $('#fName').value = f ? f.name : '';
+  $('#fConn').value = Drivers.hasBle() ? 'ble' : 'dmx';
+  $('#fProfile').value = Object.keys(db.profiles)[0];
+  const last = [...db.fixtures].reverse().find(x => !isBle(x));
+  $('#fUni').value = f ? f.universe : last ? last.universe : 0;
+  $('#fAddr').value = f ? f.address : last ? nextAddr(last) : 1;
+  $('#fGroup').value = f ? f.group || '' : '';
+  $('#fCount').value = 1;
+  $('#fCountWrap').hidden = !!f;
+  $('#dfDelete').hidden = !f;
+  syncDialog();
+  dF.showModal();
+}
+const nextAddr = f => Math.min(512, f.address + (db.profiles[f.profile]?.channels.length || 1));
+$('#addFixture').onclick = () => openFixture(null);
+$('#dfCancel').onclick = () => dF.close();
+$('#dfDelete').onclick = () => {
+  if (!editing) return;
+  const l = isBle(editing) ? links.get(linkKey(editing)) : null;
+  if (l && editing.link.kind === 'nanlite') { l.disconnect(); links.delete(linkKey(editing)); }
+  db.fixtures = db.fixtures.filter(x => x !== editing);
+  sel.delete(editing.id);
+  dF.close(); save(); renderFixtures();
+};
+$('#dfProfiles').onclick = () => openProfiles();
+$('#fFixture').onsubmit = e => {
+  e.preventDefault();
+  const name = $('#fName').value.trim(), group = $('#fGroup').value.trim();
+  if (editing) {
+    Object.assign(editing, { name, group });
+    if (!isBle(editing)) Object.assign(editing, { universe: clamp(+$('#fUni').value || 0, 0, 32767), address: clamp(+$('#fAddr').value || 1, 1, 512) });
+    dF.close(); save(); return renderFixtures();
+  }
+  if ($('#fConn').value === 'dmx') {
+    const profile = $('#fProfile').value, universe = clamp(+$('#fUni').value || 0, 0, 32767), address = clamp(+$('#fAddr').value || 1, 1, 512);
+    const n = clamp(+$('#fCount').value || 1, 1, 64), step = db.profiles[profile].channels.length;
+    for (let i = 0; i < n; i++) {
+      db.fixtures.push({ id: uid(), name: n > 1 ? `${name} ${i + 1}` : name, profile, universe, address: Math.min(512, address + i * step), group, state: newState() });
+    }
+    dF.close(); save(); return renderFixtures();
+  }
+  const brand = $('#fBrand').value;
+  if (brand === 'nanlite') {
+    const f = { id: uid(), name, group, profile: '', universe: 0, address: 1, link: { kind: 'nanlite', brand }, state: newState() };
+    db.fixtures.push(f); dF.close(); save(); renderFixtures();
+    connectFixture(f); // appelé dans le geste de l'utilisateur : le sélecteur Bluetooth peut s'ouvrir
+  } else { dF.close(); openMesh({ name, group, brand }); }
+};
+
+/* ---------- Appairage Mesh (Godox / Amaran) en 2 étapes ---------- */
+const dM = $('#dMesh');
+let mesh = null;
+function netFor(brand) {
+  let n = db.networks.find(x => x.brand === brand && x.own);
+  if (!n) {
+    n = { id: uid(), brand, own: true, netKey: MeshCrypto.hex(MeshCrypto.randomBytes(16)), appKey: MeshCrypto.hex(MeshCrypto.randomBytes(16)), ivIndex: 0, seq: 1000, src: 1, nextAddr: 2, nodes: [] };
+    db.networks.push(n); save();
+  }
+  return n;
+}
+function setMeshStep(step) {
+  mesh.step = step;
+  $('#dmTitle').textContent = `Appairer « ${mesh.name} » (${step}/2)`;
+  $('#dmText').textContent = step === 1
+    ? BLE_HINTS[mesh.brand] + ' Touche le bouton, puis choisis le projecteur dans la liste.'
+    : 'Le projecteur a rejoint le réseau et redémarre en Bluetooth. Touche le bouton et choisis-le à nouveau dans la liste.';
+  $('#dmGo').textContent = step === 1 ? 'Chercher le projecteur' : 'Terminer';
+}
+function openMesh(info) {
+  if (!Drivers.hasBle()) { toast('Bluetooth indisponible ici : ouvre la page dans Bluefy.', 6000); return; }
+  mesh = { ...info, net: netFor(info.brand) };
+  mesh.addr = mesh.net.nextAddr;
+  $('#dmStatus').textContent = ''; $('#dmErr').textContent = '';
+  setMeshStep(1);
+  dM.showModal();
+}
+$('#dmCancel').onclick = () => dM.close();
+$('#dmGo').onclick = async () => {
+  const btn = $('#dmGo'), say = s => { $('#dmStatus').textContent = s; };
+  $('#dmErr').textContent = ''; btn.disabled = true;
+  try {
+    const link = netLink(mesh.net);
+    if (mesh.step === 1) {
+      const r = await link.provisionNode(mesh.addr, say);
+      mesh.devKey = r.deviceKey; mesh.num = r.numElements;
+      say('Enrôlé ✓ — redémarrage du projecteur…');
+      await sleep(2500);
+      setMeshStep(2); say('Prêt pour l\'étape 2.');
+    } else {
+      await link.configureNode(mesh.addr, mesh.devKey, say);
+      mesh.net.nodes.push({ addr: mesh.addr, deviceKey: MeshCrypto.hex(mesh.devKey) });
+      mesh.net.nextAddr = mesh.addr + (mesh.num || 1);
+      const f = { id: uid(), name: mesh.name, group: mesh.group, profile: '', universe: 0, address: 1, link: { kind: 'mesh', net: mesh.net.id, addr: mesh.addr, brand: mesh.brand }, state: newState() };
+      db.fixtures.push(f); save(); renderFixtures(); dM.close();
+      toast('Projecteur ajouté ✓ Monte l\'intensité pour le tester.', 6000);
+    }
+  } catch (e) { $('#dmErr').textContent = bleErr(e); say(''); }
+  finally { btn.disabled = false; }
+};
+$('#dmImportGo').onclick = () => {
+  try {
+    const j = JSON.parse($('#dmImport').value), ok = h => /^[0-9a-fA-F]{32}$/.test(h || '');
+    if (!BRAND_LABEL[j.brand] || j.brand === 'nanlite') throw new Error('« brand » doit valoir "godox" ou "amaran".');
+    if (!ok(j.netKey) || !ok(j.appKey)) throw new Error('netKey et appKey : 32 caractères hexadécimaux chacune.');
+    const nodes = (j.nodes || []).map(Number).filter(a => a > 0 && a < 0x8000);
+    if (!nodes.length) throw new Error('« nodes » : liste des adresses des projecteurs (ex. [2,4,6]).');
+    const net = { id: uid(), brand: j.brand, own: false, netKey: j.netKey.toLowerCase(), appKey: j.appKey.toLowerCase(), ivIndex: j.ivIndex | 0, seq: Math.max(300000, j.seq | 0), src: j.src || 1, nextAddr: 0x100, nodes: nodes.map(addr => ({ addr })) };
+    db.networks.push(net);
+    nodes.forEach(addr => db.fixtures.push({ id: uid(), name: `${BRAND_LABEL[j.brand]} ${addr}`, group: '', profile: '', universe: 0, address: 1, link: { kind: 'mesh', net: net.id, addr, brand: j.brand }, state: newState() }));
+    save(); renderFixtures(); dM.close(); toast(`${nodes.length} projecteur(s) importé(s).`);
+  } catch (e) { $('#dmErr').textContent = e.message; }
+};
+
+/* ---------- Dialogue profils ---------- */
+const dP = $('#dProfiles');
+function openProfiles() { $('#profilesText').value = JSON.stringify(db.profiles, null, 1); $('#dpErr').textContent = ''; dP.showModal(); }
+$('#dpCancel').onclick = () => { dP.close(); if (dF.open) fillProfiles(); };
+$('#dpReset').onclick = () => { $('#profilesText').value = JSON.stringify(DEFAULT_PROFILES, null, 1); };
+$('#dpSave').onclick = () => {
+  try {
+    const p = JSON.parse($('#profilesText').value);
+    for (const [k, v] of Object.entries(p)) {
+      if (!v || !Array.isArray(v.channels) || !v.channels.length) throw new Error(`Profil « ${k} » : "channels" manquant`);
+      if (v.channels.length > 512) throw new Error(`Profil « ${k} » : trop de canaux`);
+    }
+    db.profiles = p; save(); dP.close(); fillProfiles(); renderFixtures();
+  } catch (err) { $('#dpErr').textContent = err.message; }
+};
+
+/* ---------- Scènes ---------- */
+function renderScenes() {
+  $('#scenes').innerHTML = db.scenes.map(s => `<span class="chip" data-id="${s.id}">${esc(s.name)}</span>`).join('') || '<span class="hint">Aucune mémoire.</span>';
+}
+$('#saveScene').onclick = () => {
+  if (!db.fixtures.length) return;
+  const name = prompt('Nom de la mémoire ?');
+  if (!name) return;
+  const states = {};
+  db.fixtures.forEach(f => { states[f.id] = { ...f.state }; });
+  db.scenes.push({ id: uid(), name: name.trim(), states });
+  save(); renderScenes();
+};
+function recall(scene) {
+  const dur = db.settings.fade * 1000, now = performance.now();
+  for (const f of db.fixtures) {
+    const to = scene.states[f.id];
+    if (!to) continue;
+    if (dur > 0) {
+      f.anim = { from: { ...f.state }, to: { ...to }, start: now, dur };
+      Object.assign(f.state, { mode: to.mode, fx: to.fx, fxSpeed: to.fxSpeed });
+    } else { f.state = { ...to }; f.anim = null; }
+  }
+  save(); syncUI();
+}
+let pressTimer = null, longPress = false;
+$('#scenes').addEventListener('pointerdown', e => {
+  const c = e.target.closest('.chip[data-id]'); if (!c) return;
+  longPress = false;
+  pressTimer = setTimeout(() => {
+    longPress = true;
+    const s = db.scenes.find(x => x.id === c.dataset.id);
+    if (s && confirm(`Effacer la mémoire « ${s.name} » ?`)) { db.scenes = db.scenes.filter(x => x !== s); save(); renderScenes(); }
+  }, 700);
+});
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => $('#scenes').addEventListener(ev, () => clearTimeout(pressTimer)));
+$('#scenes').addEventListener('click', e => {
+  const c = e.target.closest('.chip[data-id]');
+  if (!c || longPress) return;
+  const s = db.scenes.find(x => x.id === c.dataset.id);
+  if (s) recall(s);
+});
+
+/* ---------- Réglages ---------- */
+const dS = $('#dSettings');
+$('#btnSettings').onclick = () => {
+  $('#sTransport').value = db.settings.transport; $('#sUrl').value = db.settings.url; $('#sFade').value = db.settings.fade;
+  $('#sDmx').checked = !!db.settings.showDmx;
+  dS.showModal();
+};
+$('#sClose').onclick = () => {
+  db.settings.transport = $('#sTransport').value;
+  db.settings.url = $('#sUrl').value.trim() || db.settings.url;
+  db.settings.fade = clamp(+$('#sFade').value || 0, 0, 60);
+  db.settings.showDmx = $('#sDmx').checked;
+  document.body.classList.toggle('dmx', db.settings.showDmx);
+  save(); dS.close(); transport.connect();
+};
+
+/* ---------- Démarrage ---------- */
+document.body.classList.toggle('dmx', !!db.settings.showDmx);
+$('#bleWarn').hidden = Drivers.hasBle() || !db.fixtures.some(isBle);
+renderFixtures(); renderScenes(); transport.connect();
+
+
+</script>
+</body>
+</html>
